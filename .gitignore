@@ -1,0 +1,179 @@
+# Dependencies (npm, yarn, pnpm)
+node_modules/
+jspm_packages/
+web_modules/
+bower_components/
+.pnp
+.pnp.js
+.pnp.cjs
+.pnp.loader.mjs
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.yarn-integrity
+.pnpm-store/
+npm-shrinkwrap.json.bak
+
+# Logs
+logs/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+.node_repl_history
+lib-cov/
+build/Release
+
+# Environment files. Keep committed examples.
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Build output
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.vuepress/dist/
+.temp/
+.docusaurus/
+.vitepress/dist/
+.vitepress/cache/
+storybook-static/
+*.tsbuildinfo
+
+# Vite / caches
+.vite/
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+.stylelintcache
+.oxlintcache
+*.local
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.fusebox/
+.grunt/
+.lock-wscript
+.npm/
+.tern-port
+
+# Test and coverage
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+junit.xml
+test-results/
+playwright-report/
+blob-report/
+.vitest/
+
+# Hosting local dirs
+.vercel/
+.vercel
+.netlify/
+.netlify
+.render/
+.wrangler/
+.serverless/
+.dynamodb/
+
+# Package output
+*.tgz
+
+# Secrets / keys
+*.pem
+*.key
+*.p12
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vs/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sln.docstates
+*.user
+*.userosscache
+*.swp
+*.swo
+*.swn
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+.atom/
+*.code-workspace
+.history/
+.vscode-test/
+.cursor/
