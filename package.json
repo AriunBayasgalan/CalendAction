@@ -1,0 +1,28 @@
+{
+  "name": "calendaction",
+  "version": "1.0.0",
+  "description": "CalendAction MERN starter",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
+    "dev": "concurrently -k -n client,server -c cyan,green \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AriunBayasgalan/CalendAction.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AriunBayasgalan/CalendAction/issues"
+  },
+  "homepage": "https://github.com/AriunBayasgalan/CalendAction#readme",
+  "private": true,
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  },
+  "overrides": {
+    "shell-quote": "1.12.0"
+  }
+}
