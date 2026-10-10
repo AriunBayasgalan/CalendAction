@@ -11,10 +11,11 @@ The API starts without MongoDB. If `MONGODB_URI` is missing or the connection fa
 
 ## Environment
 
-Copy the example file and replace the placeholders. Real values stay in `.env`, which is gitignored. `.env.example` is safe to commit.
+Copy the example files and replace the placeholders. Real values stay in `.env`, which is gitignored. `.env.example` is safe to commit.
 
 ```bash
 cp my-app/backend/.env.example my-app/backend/.env
+cp my-app/frontend/.env.example my-app/frontend/.env
 ```
 
 `my-app/backend/.env`
@@ -23,6 +24,12 @@ cp my-app/backend/.env.example my-app/backend/.env
 | --- | --- |
 | `PORT` | API port (default `5000`) |
 | `MONGODB_URI` | MongoDB connection string |
+
+`my-app/frontend/.env`
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_API_URL` | API base URL. Vite only exposes variables prefixed with `VITE_`. |
 
 ## Install
 
