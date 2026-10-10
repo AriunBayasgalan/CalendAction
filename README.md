@@ -1,6 +1,6 @@
 # CalendAction
 
-MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript frontend and an Express + Mongoose API. Auth, the week view, and data models are later issues.
+MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript client and an Express + Mongoose API. Auth, the week view, and data models are later issues.
 
 ## Prerequisites
 
@@ -11,27 +11,18 @@ The API starts without MongoDB. If `MONGODB_URI` is missing or the connection fa
 
 ## Environment
 
-Copy the example files and replace the placeholders. Real values stay in `.env`, which is gitignored. `.env.example` is safe to commit.
+Copy the example file and replace the placeholders. Real values stay in `.env`, which is gitignored. `.env.example` is safe to commit.
 
 ```bash
 cp my-app/backend/.env.example my-app/backend/.env
-cp my-app/frontend/.env.example my-app/frontend/.env
 ```
 
 `my-app/backend/.env`
 
 | Variable | Purpose |
 | --- | --- |
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `JWT_SECRET` | Signing secret for later auth work |
-| `CLIENT_ORIGIN` | Browser origin allowed by CORS (default `http://localhost:5173`) |
 | `PORT` | API port (default `5000`) |
-
-`my-app/frontend/.env`
-
-| Variable | Purpose |
-| --- | --- |
-| `VITE_API_URL` | API base URL. Vite only exposes variables prefixed with `VITE_`. |
+| `MONGODB_URI` | MongoDB connection string |
 
 ## Install
 
@@ -59,7 +50,7 @@ npm run dev:frontend
 npm run dev:backend
 ```
 
-Frontend production build:
+Client production build:
 
 ```bash
 npm run build
@@ -73,17 +64,7 @@ npm start
 
 ## Layout
 
-The directory tree matches [GitTogether](https://github.com/AriunBayasgalan/GitTogether). Folders that do not have CalendAction code yet contain a short `info.txt` (`Info.txt` under `models/`) describing what belongs there.
-
-The frontend UI is the stock Vite + React + TypeScript starter (counter, `src/App.css`, `src/index.css`, and the React and Vite logos). `routes.tsx` and `Layout.tsx` are described in `info.txt` files instead of being modules, so they are not imported and the starter is the only screen. No router dependency is installed.
-
-- `my-app/frontend/` — Vite, React, and TypeScript. Tailwind and Zustand are installed; the starter does not import them.
-  - `src/main.tsx` mounts `src/App.tsx`.
-  - `src/app/`, `src/app/components/` (including `ui/` and `figma/`), `src/app/pages/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/` are placeholders.
-  - `public/` holds the starter favicon and icons. `src/assets/` holds the starter images.
-- `my-app/backend/` — Express entry point `server.js`. Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet.
-  - `routes/` and `controllers/` serve `GET /`.
-  - `middleware/` and `models/` are placeholders. CORS and `express.json()` stay in `server.js`.
-- `.github/workflows/blank.yml` — starter CI workflow.
+- `my-app/frontend/` — stock Vite + React + TypeScript starter (`src/App.tsx`, `src/App.css`, `src/index.css`). The GitTogether folder skeleton is in place: `src/app/components/` (including `ui/` and `figma/`), `src/app/pages/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/`. Folders without app code contain `info.txt`.
+- `my-app/backend/` — `server.js`, `controllers/`, `middleware/`, `models/`, and `routes/`. Express, Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet. `middleware/` and `models/` are placeholders.
 
 Sign-in, `/login`, `/week`, `/health`, and Mongoose models are not in this scaffold.
