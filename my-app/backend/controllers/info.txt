@@ -1,0 +1,2 @@
+controllers is the logic for each route!
+(imagine the tree we made, these are the arrows)

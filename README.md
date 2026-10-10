@@ -73,7 +73,17 @@ npm start
 
 ## Layout
 
-- `my-app/frontend/` — Vite, React, and TypeScript. `src/app/App.tsx` renders the starter screen in `src/app/pages/`, and CSS lives in `src/styles/`. Tailwind and Zustand are installed; Zustand is not used by a screen yet.
-- `my-app/backend/` — Express entry point `server.js`, with the root route in `routes/` and its handler in `controllers/`. Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet. There are no models or custom middleware in this scaffold.
+The directory tree matches [GitTogether](https://github.com/AriunBayasgalan/GitTogether). Folders that do not have CalendAction code yet contain a short `info.txt` (`Info.txt` under `models/`) describing what belongs there.
+
+The frontend UI is the stock Vite + React + TypeScript starter (counter, `src/App.css`, `src/index.css`, and the React and Vite logos). `routes.tsx` and `Layout.tsx` are described in `info.txt` files instead of being modules, so they are not imported and the starter is the only screen. No router dependency is installed.
+
+- `my-app/frontend/` — Vite, React, and TypeScript. Tailwind and Zustand are installed; the starter does not import them.
+  - `src/main.tsx` mounts `src/App.tsx`.
+  - `src/app/`, `src/app/components/` (including `ui/` and `figma/`), `src/app/pages/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/` are placeholders.
+  - `public/` holds the starter favicon and icons. `src/assets/` holds the starter images.
+- `my-app/backend/` — Express entry point `server.js`. Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet.
+  - `routes/` and `controllers/` serve `GET /`.
+  - `middleware/` and `models/` are placeholders. CORS and `express.json()` stay in `server.js`.
+- `.github/workflows/blank.yml` — starter CI workflow.
 
 Sign-in, `/login`, `/week`, `/health`, and Mongoose models are not in this scaffold.

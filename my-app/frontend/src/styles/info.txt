@@ -1,0 +1,2 @@
+Shared stylesheets belong here.
+The starter uses src/index.css and src/App.css.

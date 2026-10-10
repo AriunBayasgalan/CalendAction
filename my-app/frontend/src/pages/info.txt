@@ -1,0 +1,2 @@
+Page components outside src/app/pages belong here.
+The current screen is the stock Vite starter in src/App.tsx.

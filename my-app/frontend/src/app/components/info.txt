@@ -1,0 +1,2 @@
+Shared app components such as Layout.tsx belong here.
+Layout is not mounted. The starter renders src/App.tsx directly, with no router.
