@@ -1,6 +1,6 @@
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 
-export default function App() {
+export default function Home() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 text-slate-900">
       <div className="max-w-lg text-center">

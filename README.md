@@ -1,6 +1,6 @@
 # CalendAction
 
-MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript client and an Express + Mongoose API. Auth, the week view, and data models are later issues.
+MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript frontend and an Express + Mongoose API. Auth, the week view, and data models are later issues.
 
 ## Prerequisites
 
@@ -14,11 +14,11 @@ The API starts without MongoDB. If `MONGODB_URI` is missing or the connection fa
 Copy the example files and replace the placeholders. Real values stay in `.env`, which is gitignored. `.env.example` is safe to commit.
 
 ```bash
-cp server/.env.example server/.env
-cp client/.env.example client/.env
+cp my-app/backend/.env.example my-app/backend/.env
+cp my-app/frontend/.env.example my-app/frontend/.env
 ```
 
-`server/.env`
+`my-app/backend/.env`
 
 | Variable | Purpose |
 | --- | --- |
@@ -27,7 +27,7 @@ cp client/.env.example client/.env
 | `CLIENT_ORIGIN` | Browser origin allowed by CORS (default `http://localhost:5173`) |
 | `PORT` | API port (default `5000`) |
 
-`client/.env`
+`my-app/frontend/.env`
 
 | Variable | Purpose |
 | --- | --- |
@@ -41,7 +41,7 @@ From the repository root:
 npm run install:all
 ```
 
-That installs root tooling, `client/`, and `server/`.
+That installs root tooling, `my-app/frontend/`, and `my-app/backend/`.
 
 ## Run locally
 
@@ -55,11 +55,11 @@ npm run dev
 One side at a time:
 
 ```bash
-npm run dev:client
-npm run dev:server
+npm run dev:frontend
+npm run dev:backend
 ```
 
-Client production build:
+Frontend production build:
 
 ```bash
 npm run build
@@ -73,7 +73,7 @@ npm start
 
 ## Layout
 
-- `client/` — Vite, React, TypeScript, Tailwind, and Zustand (installed, not used by a screen yet)
-- `server/` — Express, Mongoose, CORS, and dotenv. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet
+- `my-app/frontend/` — Vite, React, and TypeScript. `src/app/App.tsx` renders the starter screen in `src/app/pages/`, and CSS lives in `src/styles/`. Tailwind and Zustand are installed; Zustand is not used by a screen yet.
+- `my-app/backend/` — Express entry point `server.js`, with the root route in `routes/` and its handler in `controllers/`. Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet. There are no models or custom middleware in this scaffold.
 
 Sign-in, `/login`, `/week`, `/health`, and Mongoose models are not in this scaffold.
