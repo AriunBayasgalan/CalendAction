@@ -72,6 +72,6 @@ npm start
 ## Layout
 
 - `my-app/frontend/` — stock Vite + React + TypeScript starter (`src/App.tsx`, `src/App.css`, `src/index.css`). The GitTogether folder skeleton is in place: `src/app/components/` (including `ui/` and `figma/`), `src/app/pages/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/`. Folders without app code contain `info.txt`.
-- `my-app/backend/` — `server.js`, `controllers/`, `middleware/`, `models/`, and `routes/`. Express, Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet. `middleware/` and `models/` are placeholders.
+- `my-app/backend/` — `server.js` answers `GET /` inline. `controllers/`, `routes/`, `middleware/`, and `models/` are placeholders. Express, Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet.
 
 Sign-in, `/login`, `/week`, `/health`, and Mongoose models are not in this scaffold.
