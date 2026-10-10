@@ -1,0 +1,2 @@
+Route modules such as routes.tsx belong here.
+They are not added as code, so the app stays the stock Vite + React + TypeScript starter in src/App.tsx.

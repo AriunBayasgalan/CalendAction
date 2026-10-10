@@ -1,0 +1,2 @@
+Page components for the app belong here.
+The current screen is the stock starter in src/App.tsx, not a page in this folder.

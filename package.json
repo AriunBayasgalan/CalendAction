@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "CalendAction MERN starter",
   "scripts": {
-    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
-    "dev": "concurrently -k -n client,server -c cyan,green \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
-    "dev:client": "npm run dev --prefix client",
-    "dev:server": "npm run dev --prefix server",
-    "build": "npm run build --prefix client",
-    "start": "npm start --prefix server"
+    "install:all": "npm install && npm install --prefix my-app/frontend && npm install --prefix my-app/backend",
+    "dev": "concurrently -k -n frontend,backend -c cyan,green \"npm run dev --prefix my-app/frontend\" \"npm run dev --prefix my-app/backend\"",
+    "dev:frontend": "npm run dev --prefix my-app/frontend",
+    "dev:backend": "npm run dev --prefix my-app/backend",
+    "build": "npm run build --prefix my-app/frontend",
+    "start": "npm start --prefix my-app/backend"
   },
   "repository": {
     "type": "git",
