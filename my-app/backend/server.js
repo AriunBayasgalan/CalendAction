@@ -27,16 +27,17 @@ app.listen(port, () => {
 
 async function connectMongo() {
   if (!mongoUri) {
-    console.warn("MONGODB_URI is not set. API is running without MongoDB.");
-    return;
+    console.error("MONGODB_URI is not set. Add it to my-app/backend/.env");
+    process.exit(1);
   }
 
   try {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
-    console.log("Connected to MongoDB.");
+    await mongoose.connection.db.admin().ping();
+    console.log("MongoDB ping succeeded. Connected to Atlas.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`MongoDB connection failed: ${message}`);
-    console.error("API is running without a database connection.");
+    process.exit(1);
   }
 }
