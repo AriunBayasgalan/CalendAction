@@ -16,6 +16,10 @@ app.get("/", (_req, res) => {
   res.json({ name: "CalendAction API" });
 });
 
+app.get("/health", (_req, res) => {
+  res.sendStatus(200);
+});
+
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
   console.log(`CORS origin: ${clientOrigin}`);
