@@ -21,6 +21,11 @@ app.get("/", (_req, res) => {
 
 app.use("/health", healthRoutes);
 //tells the server to use the imported file
+app.get("/bad-request", (_req, _res, next) => {
+  const err = new Error("Bad request");
+  err.status = 400;
+  next(err);
+});
 app.use(notFound);
 //if there are no matches
 app.use(errorHandler);
