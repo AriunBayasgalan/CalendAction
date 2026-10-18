@@ -14,13 +14,14 @@ const signToken = (user) =>
 export const register = async (req, res) => {
   const parsed = credentials.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid input', details: z.treeifyError(err) });
+      const err = z.treeifyError(parsed.error);
+    return res.status(400).json({ error: 'Invalid input', err });
   }
   const { email, password } = parsed.data;
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ email: email, password: passwordHash });
+    const user = await User.create({ email: email.toLowerCase(), password: passwordHash });
     return res.status(201).json({ token: signToken(user), user });
   } catch (err) {
     if (err.code === 11000) {
