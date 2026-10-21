@@ -1,0 +1,108 @@
+.scroller {
+  /* Rows stretch to fill the window; below this height the page scrolls instead. */
+  --min-hour-height: 28px;
+  --gutter-width: 64px;
+
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto;
+  /* Room for the "10 PM" label, which hangs below the last line. */
+  padding-bottom: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: var(--gutter-width) repeat(7, minmax(96px, 1fr));
+  grid-template-rows: auto 1fr;
+  flex: 1;
+  min-width: calc(var(--gutter-width) + 7 * 96px);
+}
+
+.corner,
+.gutter {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bg);
+}
+
+.dayHeader {
+  padding: 12px 4px 14px;
+  text-align: center;
+  border-left: 1px solid var(--grid-line);
+  border-bottom: 1px solid var(--grid-line);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.weekday,
+.date {
+  font-size: 20px;
+  font-weight: 300;
+}
+
+.dayHeader.today {
+  color: var(--accent);
+
+  .weekday,
+  .date {
+    font-weight: 600;
+  }
+}
+
+.gutter {
+  min-height: calc(var(--hour-count) * var(--min-hour-height));
+}
+
+.hourLabel {
+  position: absolute;
+  right: 10px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.dayColumn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--grid-line);
+  border-bottom: 1px solid var(--grid-line);
+}
+
+.today {
+  background: var(--accent-bg);
+}
+
+.hourCell {
+  flex: 1;
+  min-height: var(--min-hour-height);
+  box-sizing: border-box;
+
+  & + & {
+    border-top: 1px solid var(--grid-line);
+  }
+}
+
+.nowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px solid var(--accent);
+  z-index: 1;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: -6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+}
