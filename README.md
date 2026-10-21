@@ -1,6 +1,6 @@
 # CalendAction
 
-MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript client with an empty routed shell and an Express + Mongoose API. Auth, the week view, and data models are later issues.
+MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript client with a routed shell and an empty week grid, and an Express + Mongoose API. Auth, events, and data models are later issues.
 
 ## Prerequisites
 
@@ -71,7 +71,7 @@ npm start
 
 ## Layout
 
-- `my-app/frontend/` — Vite + React + TypeScript app shell with React Router. Routes are in `src/app/routes.tsx` (`/login`, `/week`; `/` and unknown paths redirect to `/week`). The header layout is `src/app/components/Layout.tsx`, and the placeholder pages are in `src/app/pages/`. Styling is plain CSS: global styles in `src/index.css`, component styles as CSS modules. The rest of the GitTogether folder skeleton is in place: `src/app/components/ui/`, `src/app/components/figma/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/`. Folders without app code contain `info.txt`.
+- `my-app/frontend/` — Vite + React + TypeScript app shell with React Router. Routes are in `src/app/routes.tsx` (`/login`, `/week`; `/` and unknown paths redirect to `/week`). The header layout is `src/app/components/Layout.tsx`, and the pages are in `src/app/pages/`. The week view (`WeekPage.tsx`) uses `WeekHeader.tsx` and `WeekGrid.tsx` from `src/app/components/`, with the date helpers in `week.ts` next to them. Weeks run Monday to Sunday, 7am to 10pm, in the browser's local timezone. Styling is plain CSS: global styles in `src/index.css`, component styles as CSS modules. The rest of the GitTogether folder skeleton is in place: `src/app/components/ui/`, `src/app/components/figma/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/`. Folders without app code contain `info.txt`.
 - `my-app/backend/` — `server.js` answers `GET /` inline. `controllers/`, `routes/`, `middleware/`, and `models/` are placeholders. Express, Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet.
 
-`/login` and `/week` are empty placeholder pages. Sign-in, the week view, `/health`, and Mongoose models are later issues.
+`/week` shows an empty week grid with previous, next, and today controls. `/login` is a placeholder page. Sign-in, events, `/health`, and Mongoose models are later issues.
