@@ -16,7 +16,7 @@ app.use(cors({ origin: clientOrigin }));
 app.use(express.json());
 
 app.get("/", (_req, res) => {
-  res.json({ name: "CalendAction API" });
+  res.status(200).type("text").send("200 OK");
 });
 
 app.use("/health", healthRoutes);
@@ -26,6 +26,11 @@ app.get("/bad-request", (_req, _res, next) => {
   err.status = 400;
   next(err);
 });
+// Demo route: deliberately crashes so the 500 handler can be seen
+app.get("/crash", () => {
+  throw new Error("Demo crash");
+});
+
 app.use(notFound);
 //if there are no matches
 app.use(errorHandler);
