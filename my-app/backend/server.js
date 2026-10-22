@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
+import ruleRoutes from "./routes/rule.routes.js";
 
 const port = Number(process.env.PORT) || 5000;
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -15,6 +16,7 @@ app.use(express.json());
 app.get("/", (_req, res) => {
   res.json({ name: "CalendAction API" });
 });
+app.use("/rules", ruleRoutes);
 
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
