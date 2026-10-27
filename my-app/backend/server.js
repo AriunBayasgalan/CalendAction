@@ -2,6 +2,9 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
+import healthRoutes from "./routes/health.routes.js";
+import { notFound, errorHandler } from "./middleware/errorHandler.js";
+
 
 const port = Number(process.env.PORT) || 5000;
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -13,9 +16,25 @@ app.use(cors({ origin: clientOrigin }));
 app.use(express.json());
 
 app.get("/", (_req, res) => {
-  res.json({ name: "CalendAction API" });
+  res.status(200).type("text").send("200 OK");
 });
 
+app.use("/health", healthRoutes);
+//tells the server to use the imported file
+app.get("/bad-request", (_req, _res, next) => {
+  const err = new Error("Bad request");
+  err.status = 400;
+  next(err);
+});
+// Demo route: deliberately crashes so the 500 handler can be seen
+app.get("/crash", () => {
+  throw new Error("Demo crash");
+});
+
+app.use(notFound);
+//if there are no matches
+app.use(errorHandler);
+//if there is a crash
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
   console.log(`CORS origin: ${clientOrigin}`);
