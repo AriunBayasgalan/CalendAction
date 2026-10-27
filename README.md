@@ -1,6 +1,6 @@
 # CalendAction
 
-MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript client with an empty routed shell and an Express + Mongoose API. Auth, the week view, and data models are later issues.
+MERN starter for the WebDev@GT CalendAction MVP. This repo is the scaffold only: a Vite + React + TypeScript client and an Express + Mongoose API. Auth, the week view, and data models are later issues.
 
 ## Prerequisites
 
@@ -71,7 +71,7 @@ npm start
 
 ## Layout
 
-- `my-app/frontend/` — Vite + React + TypeScript app shell with React Router. Routes are in `src/app/routes.tsx` (`/login`, `/week`; `/` and unknown paths redirect to `/week`). The header layout is `src/app/components/Layout.tsx`, and the placeholder pages are in `src/app/pages/`. Styling is plain CSS: global styles in `src/index.css`, component styles as CSS modules. The rest of the GitTogether folder skeleton is in place: `src/app/components/ui/`, `src/app/components/figma/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/`. Folders without app code contain `info.txt`.
+- `my-app/frontend/` — stock Vite + React + TypeScript starter (`src/App.tsx`, `src/App.css`, `src/index.css`). The GitTogether folder skeleton is in place: `src/app/components/` (including `ui/` and `figma/`), `src/app/pages/`, `src/components/`, `src/contexts/`, `src/pages/`, `src/styles/`, and `guidelines/`. Folders without app code contain `info.txt`.
 - `my-app/backend/` — `server.js` answers `GET /` inline. `controllers/`, `routes/`, `middleware/`, and `models/` are placeholders. Express, Mongoose, CORS, and dotenv are wired up. `jsonwebtoken`, `bcrypt`, and `zod` are installed for later issues and are not wired up yet.
 
-`/login` and `/week` are empty placeholder pages. Sign-in, the week view, `/health`, and Mongoose models are later issues.
+Sign-in, `/login`, `/week`, `/health`, and Mongoose models are not in this scaffold.
