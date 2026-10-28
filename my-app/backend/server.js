@@ -2,6 +2,8 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
+import authRoutes from './routes/authRoutes.js';
+import requireAuth from './middleware/requireAuth.js';
 import healthRoutes from "./routes/health.routes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
@@ -31,6 +33,8 @@ app.get("/crash", () => {
   throw new Error("Demo crash");
 });
 
+app.use('/auth', authRoutes);
+
 app.use(notFound);
 //if there are no matches
 app.use(errorHandler);
@@ -59,4 +63,5 @@ async function connectMongo() {
     console.error(`MongoDB connection failed: ${message}`);
     process.exit(1);
   }
+
 }

@@ -1,7 +1,10 @@
 import { Link, NavLink, Outlet } from 'react-router'
+import { useAuth } from '../../contexts/auth.ts'
 import styles from './Layout.module.css'
 
 function Layout() {
+  const { token, logout } = useAuth()
+
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -12,9 +15,15 @@ function Layout() {
           <NavLink to="/week" className={styles.link}>
             Week
           </NavLink>
-          <NavLink to="/login" className={styles.link}>
-            Log in
-          </NavLink>
+          {token ? (
+            <button type="button" className={styles.link} onClick={logout}>
+              Log out
+            </button>
+          ) : (
+            <NavLink to="/login" className={styles.link}>
+              Log in
+            </NavLink>
+          )}
         </nav>
       </header>
       <main className={styles.main}>
