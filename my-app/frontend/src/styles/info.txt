@@ -1,2 +1,2 @@
 Shared stylesheets belong here.
-The starter uses src/index.css and src/App.css.
+Global styles live in src/index.css; component styles sit next to their component as CSS modules.
