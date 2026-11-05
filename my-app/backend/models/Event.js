@@ -14,7 +14,7 @@ const eventSchema = new mongoose.Schema(
 
 
 eventSchema.pre('validate', function () {
-  if (this.start && this.end && this.end <= this.start) {
+  if (this.start && this.end && this.end < this.start) {
     this.invalidate('end', 'End must be after start');
   }
 });
