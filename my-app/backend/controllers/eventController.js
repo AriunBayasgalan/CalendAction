@@ -3,16 +3,11 @@ import { z } from 'zod';
 import Event from '../models/Event.js';
 
 
-const dateValue = z.preprocess(
-  (v) =>
-    (typeof v === 'string' && v.trim() !== '') ||
-    typeof v === 'number' ||
-    v instanceof Date
-      ? v
-      : undefined,
-  z.coerce.date({error: "Must put in a valid date"})
-);
-
+const dateValue = z
+  .union([z.iso.datetime({ offset: true, local: true }), z.iso.date()], {
+    error: 'Must put in a valid date',
+  })
+  .transform((s) => new Date(s));
 
 const eventFields = z.object({
   title: z.string().trim().min(1).max(200),
