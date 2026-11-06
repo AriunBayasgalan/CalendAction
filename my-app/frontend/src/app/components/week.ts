@@ -49,6 +49,10 @@ const fullDateFormat = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 })
 const hourFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric' })
+const timeFormat = new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+})
 
 export function formatWeekday(date: Date) {
   return weekdayFormat.format(date)
@@ -61,6 +65,11 @@ export function formatFullDate(date: Date) {
 // "7 AM" ... "10 PM"
 export function formatHour(hour: number) {
   return hourFormat.format(new Date(2000, 0, 1, hour))
+}
+
+// "9:30 AM"
+export function formatTime(date: Date) {
+  return timeFormat.format(date)
 }
 
 // "October 19 – October 25, 2026", or with both years when the week spans two.
