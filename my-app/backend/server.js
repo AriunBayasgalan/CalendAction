@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
 import authRoutes from './routes/authRoutes.js';
+import eventRoutes from './routes/eventRoutes.js';
 import requireAuth from './middleware/requireAuth.js';
 import healthRoutes from "./routes/health.routes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
@@ -51,6 +52,7 @@ app.get('/auth/me', requireAuth, async (req, res) => {
   }
 });
 app.use('/auth', authRoutes);
+app.use('/events', eventRoutes);
 
 app.use(notFound);
 //if there are no matches
