@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
+import ruleRoutes from "./routes/rule.routes.js";
 import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import requireAuth from './middleware/requireAuth.js';
@@ -38,6 +39,7 @@ app.get("/bad-request", (_req, _res, next) => {
 app.get("/crash", () => {
   throw new Error("Demo crash");
 });
+app.use("/rules", ruleRoutes);
 
 app.get('/auth/me', requireAuth, async (req, res) => {
   try {
