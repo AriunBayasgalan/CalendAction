@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import requireAuth from './middleware/requireAuth.js';
 import healthRoutes from "./routes/health.routes.js";
+import ruleRoutes from "./routes/rule.routes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import User from './models/User.js';
 
@@ -26,6 +27,7 @@ if (!process.env.JWT_SECRET) {
 app.get("/", (_req, res) => {
   res.status(200).type("text").send("200 OK");
 });
+app.use("/rules", ruleRoutes);
 
 app.use("/health", healthRoutes);
 //tells the server to use the imported file
