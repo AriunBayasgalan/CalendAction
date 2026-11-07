@@ -72,26 +72,29 @@ export async function createEvent(req, res) {
   }
 }
 
-export async function listEvents(req, res) {
-    const parsed = listQuerySchema.safeParse(req.query);
-  if (!parsed.success) return validationError(res, parsed.error);
 
-  const { from, to } = parsed.data;
-  const conditions = [{ owner: req.user.id }];
-
+export async function fetchEvents(ownerId, { from, to } = {}) {
+  const conditions = [{ owner: ownerId }];
 
   if (to) conditions.push({ start: { $lt: to } });
   if (from) {
     conditions.push({
       $or: [
-        { end: { $gt: from } },     // started before "from" and still running from jan to feb
-        { start: { $gte: from } },  // starts at/after "from" (covers 0-minute events)
+        { end: { $gt: from } },
+        { start: { $gte: from } },
       ],
     });
   }
 
+  return Event.find({ $and: conditions }).sort({ start: 1 });
+}
+
+export async function listEvents(req, res) {
+    const parsed = listQuerySchema.safeParse(req.query);
+  if (!parsed.success) return validationError(res, parsed.error);
+
   try {
-    const list = await Event.find({ $and: conditions }).sort({ start: 1 });
+    const list = await fetchEvents(req.user.id, parsed.data);
     res.json(list);
   } catch (err) {
     serverError(res, err);
