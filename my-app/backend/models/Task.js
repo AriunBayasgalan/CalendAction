@@ -15,11 +15,26 @@ const taskSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+taskSchema.pre('validate', function () {
+  if (this.status === 'scheduled') {
+    if (!this.start || !this.end) {
+      this.invalidate('start', 'Scheduled tasks require start and end');
+    } else if (this.end <= this.start) {
+      this.invalidate('end', 'end must be after start');
+    }
+  } else {
+    this.start = undefined;
+    this.end = undefined;
+  }
+});
+
 taskSchema.set('toJSON', {
     transform: (_doc, ret) => {
         delete ret.__v;
         return ret;
     },
 });
+
+taskSchema.index({ owner: 1, start: 1 });
 
 export default mongoose.model('Task', taskSchema);
