@@ -33,6 +33,8 @@ function RuleForm() {
   const [notAfter, setNotAfter] = useState('17:00')
   const [label, setLabel] = useState('')
   const [error, setError] = useState('')
+  // The rule loaded into the form for editing; null means the form adds a new rule
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -59,6 +61,21 @@ function RuleForm() {
     return () => controller.abort()
   }, [apiFetch])
 
+  function startEdit(rule: Rule) {
+    setError('')
+    setEditingId(rule._id)
+    setNotBefore(rule.notBefore)
+    setNotAfter(rule.notAfter)
+    setLabel(rule.label ?? '')
+  }
+
+  function resetForm() {
+    setEditingId(null)
+    setNotBefore('09:00')
+    setNotAfter('17:00')
+    setLabel('')
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (saving) return
@@ -67,10 +84,11 @@ function RuleForm() {
     setSaving(true)
 
     try {
-      const res = await apiFetch('/rules', {
-        method: 'POST',
+      const res = await apiFetch(editingId ? `/rules/${editingId}` : '/rules', {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notBefore, notAfter, label: label || undefined }),
+        // An empty label clears it when editing
+        body: JSON.stringify({ notBefore, notAfter, label }),
       })
 
       if (!res.ok) {
@@ -78,9 +96,14 @@ function RuleForm() {
         return
       }
 
-      const created: Rule = await res.json()
-      setRules((prev) => [created, ...prev])
-      setLabel('')
+      const saved: Rule = await res.json()
+      setRules((prev) =>
+        editingId
+          ? prev.map((rule) => (rule._id === saved._id ? saved : rule))
+          : [saved, ...prev],
+      )
+      if (editingId) resetForm()
+      else setLabel('')
     } catch {
       setError('Could not save rule.')
     } finally {
@@ -103,6 +126,7 @@ function RuleForm() {
       }
 
       setRules((prev) => prev.filter((rule) => rule._id !== id))
+      if (editingId === id) resetForm()
     } catch {
       setError('Could not delete rule.')
     } finally {
@@ -143,8 +167,13 @@ function RuleForm() {
           />
         </label>
         <button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save rule'}
+          {saving ? 'Saving…' : editingId ? 'Save changes' : 'Save rule'}
         </button>
+        {editingId && (
+          <button type="button" onClick={resetForm}>
+            Cancel
+          </button>
+        )}
       </form>
 
       {/* Always rendered so screen readers announce the message when it appears */}
@@ -166,13 +195,18 @@ function RuleForm() {
                 {rule.label && <strong>{rule.label}: </strong>}
                 Nothing before {rule.notBefore}, nothing after {rule.notAfter}
               </span>
-              <button
-                type="button"
-                disabled={deletingIds.includes(rule._id)}
-                onClick={() => handleDelete(rule._id)}
-              >
-                {deletingIds.includes(rule._id) ? 'Deleting…' : 'Delete'}
-              </button>
+              <span className={styles.actions}>
+                <button type="button" onClick={() => startEdit(rule)}>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingIds.includes(rule._id)}
+                  onClick={() => handleDelete(rule._id)}
+                >
+                  {deletingIds.includes(rule._id) ? 'Deleting…' : 'Delete'}
+                </button>
+              </span>
             </li>
           ))}
         </ul>

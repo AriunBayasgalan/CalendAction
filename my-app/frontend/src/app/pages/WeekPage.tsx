@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import AddClassDialog from '../components/AddClassDialog.tsx'
+import EditEventDialog from '../components/EditEventDialog.tsx'
 import TaskForm from '../components/TaskForm.tsx'
 import type { CalendarEvent } from '../components/events.ts'
 import WeekGrid from '../components/WeekGrid.tsx'
@@ -24,6 +25,8 @@ function WeekPage() {
   })
   // Bumped by the Retry button to run the fetch again for the same week.
   const [attempt, setAttempt] = useState(0)
+  // The event open in the edit dialog, or null when it's closed.
+  const [editing, setEditing] = useState<CalendarEvent | null>(null)
 
   // Fetch only the selected week and refetch when it changes. The cleanup aborts the
   // previous request, so a slow response for an old week can't overwrite the current one.
@@ -87,9 +90,19 @@ function WeekPage() {
         </div>
       )}
       <div className={styles.body}>
-        <WeekGrid weekStart={weekStart} now={now} events={result.events} />
+        <WeekGrid
+          weekStart={weekStart}
+          now={now}
+          events={result.events}
+          onSelectEvent={setEditing}
+        />
         <TaskForm />
       </div>
+      <EditEventDialog
+        event={editing}
+        onClose={() => setEditing(null)}
+        onChanged={() => setAttempt((n) => n + 1)}
+      />
     </div>
   )
 }
