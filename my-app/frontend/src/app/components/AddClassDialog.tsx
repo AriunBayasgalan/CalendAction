@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import {
   readApiErrors,
@@ -14,6 +14,8 @@ import styles from './AddClassDialog.module.css'
 type AddClassDialogProps = {
   // Date the form starts on, e.g. today or the first day of the week being viewed.
   defaultDate: Date
+  // Called with the saved event so the page can refresh what the grid shows.
+  onCreated?: (event: CalendarEvent) => void
 }
 
 const NO_ERRORS: ApiErrors = { form: [], fields: {} }
@@ -23,13 +25,23 @@ function optional(value: FormDataEntryValue | null) {
   return text === '' ? undefined : text
 }
 
-function AddClassDialog({ defaultDate }: AddClassDialogProps) {
+// How long the "Added ..." message stays before it clears
+const STATUS_MS = 5000
+
+function AddClassDialog({ defaultDate, onCreated }: AddClassDialogProps) {
   const { apiFetch } = useAuth()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const [errors, setErrors] = useState<ApiErrors>(NO_ERRORS)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [status, setStatus] = useState('')
+
+  // Clear the "Added ..." message after a while so it doesn't linger
+  useEffect(() => {
+    if (!status) return
+    const timer = setTimeout(() => setStatus(''), STATUS_MS)
+    return () => clearTimeout(timer)
+  }, [status])
 
   function open() {
     formRef.current?.reset()
@@ -47,17 +59,20 @@ function AddClassDialog({ defaultDate }: AddClassDialogProps) {
     setErrors(NO_ERRORS)
     setIsSubmitting(true)
 
-    const formData = new FormData(event.currentTarget)
-    const date = String(formData.get('date'))
-    const body: NewEvent = {
-      title: String(formData.get('title') ?? ''),
-      start: toIsoDateTime(date, String(formData.get('startTime'))),
-      end: toIsoDateTime(date, String(formData.get('endTime'))),
-      location: optional(formData.get('location')),
-      notes: optional(formData.get('notes')),
-    }
-
+    // Everything that can throw (including turning the form's date and time into an ISO
+    // string, which fails for an incomplete or out-of-range date) is inside the try, so
+    // "Saving..." can never get stuck.
     try {
+      const formData = new FormData(event.currentTarget)
+      const date = String(formData.get('date'))
+      const body: NewEvent = {
+        title: String(formData.get('title') ?? ''),
+        start: toIsoDateTime(date, String(formData.get('startTime'))),
+        end: toIsoDateTime(date, String(formData.get('endTime'))),
+        location: optional(formData.get('location')),
+        notes: optional(formData.get('notes')),
+      }
+
       const response = await apiFetch('/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,10 +84,16 @@ function AddClassDialog({ defaultDate }: AddClassDialogProps) {
         return
       }
 
-      setStatus(`Added “${(result as CalendarEvent).title}”.`)
+      const created = result as CalendarEvent
+      setStatus(`Added “${created.title}”.`)
+      onCreated?.(created)
       close()
-    } catch {
-      setErrors({ form: ['Could not reach the server. Check your connection and try again.'], fields: {} })
+    } catch (error) {
+      const message =
+        error instanceof RangeError
+          ? 'Enter a valid date and time.'
+          : 'Could not reach the server. Check your connection and try again.'
+      setErrors({ form: [message], fields: {} })
     } finally {
       setIsSubmitting(false)
     }

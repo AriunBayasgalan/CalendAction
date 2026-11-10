@@ -55,8 +55,12 @@ export function readApiErrors(body: unknown, status: number): ApiErrors {
 }
 
 // "YYYY-MM-DD" + "HH:MM" in the browser's timezone -> ISO string for the API.
+// Throws a RangeError if the date or time is missing or invalid.
 export function toIsoDateTime(date: string, time: string) {
   const [year, month, day] = date.split('-').map(Number)
   const [hours, minutes] = time.split(':').map(Number)
-  return new Date(year, month - 1, day, hours, minutes).toISOString()
+  // Date treats years 0-99 as 1900-1999, so a typed "26" would become 1926.
+  // Read two-digit years as 20xx instead.
+  const fullYear = year >= 0 && year < 100 ? 2000 + year : year
+  return new Date(fullYear, month - 1, day, hours, minutes).toISOString()
 }
