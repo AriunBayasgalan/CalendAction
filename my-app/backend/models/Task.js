@@ -28,6 +28,22 @@ taskSchema.pre('validate', function () {
   }
 });
 
+// pre('validate') does not run on findOneAndUpdate (used by placeTask), so enforce the same rules on the update itself
+taskSchema.pre('findOneAndUpdate', function () {
+  const update = this.getUpdate() || {};
+  const set = update.$set || update;
+  if (set.status === 'scheduled') {
+    const start = set.start ? new Date(set.start) : null;
+    const end = set.end ? new Date(set.end) : null;
+    if (!start || !end) throw new Error('Scheduled tasks require start and end');
+    if (end <= start) throw new Error('end must be after start');
+  } else if (set.status === 'unscheduled') {
+    delete set.start;
+    delete set.end;
+    update.$unset = { ...(update.$unset || {}), start: '', end: '' };
+  }
+});
+
 taskSchema.set('toJSON', {
     transform: (_doc, ret) => {
         delete ret.__v;
