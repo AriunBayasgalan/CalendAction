@@ -4,6 +4,8 @@
   --gutter-width: 64px;
 
   flex: 1;
+  /* Lets the grid shrink and scroll sideways when it shares a row with the task panel. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-x: auto;
