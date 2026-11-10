@@ -38,6 +38,13 @@ export function isSameDay(a: Date, b: Date) {
   )
 }
 
+// "2026-10-19", in local time (unlike toISOString, which is UTC).
+export function toIsoDate(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' })
 const monthDayFormat = new Intl.DateTimeFormat(undefined, {
   month: 'long',

@@ -8,18 +8,13 @@ import {
   formatWeekday,
   getWeekDays,
   isSameDay,
+  toIsoDate,
 } from './week.ts'
 import styles from './WeekGrid.module.css'
 
 type WeekGridProps = {
   weekStart: Date
   now: Date
-}
-
-function toIsoDate(date: Date) {
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
 }
 
 function WeekGrid({ weekStart, now }: WeekGridProps) {
