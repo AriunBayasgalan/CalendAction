@@ -9,7 +9,40 @@ type Task = {
   durationMinutes: number
   dueDate?: string
   todoText: string
-  status: 'unscheduled'
+  // #51 adds 'scheduled' (with start and end)
+  status: 'unscheduled' | 'scheduled'
+  start?: string
+  end?: string
+}
+
+// Same limits as the API (CA-10)
+const TITLE_MAX = 200
+const TODO_MAX = 2000
+
+// Pulls the first validation message out of an error response without assuming its shape.
+// Handles Zod's treeified `details` ({ errors, properties: { field: { errors } } }),
+// a `details: [{ message }]` list, and a plain `{ error }` string.
+async function readErrorMessage(res: Response, fallback: string) {
+  if (!res.headers.get('content-type')?.includes('application/json')) return fallback
+
+  try {
+    const data = await res.json()
+    const details = data?.details
+    const fieldErrors = details?.properties
+      ? Object.values(details.properties as Record<string, { errors?: string[] }>).flatMap(
+          (field) => field?.errors ?? [],
+        )
+      : []
+    return (
+      fieldErrors[0] ??
+      details?.errors?.[0] ??
+      (Array.isArray(details) ? details[0]?.message : undefined) ??
+      data?.error ??
+      fallback
+    )
+  } catch {
+    return fallback
+  }
 }
 
 const dueFormat = new Intl.DateTimeFormat(undefined, {
@@ -26,24 +59,44 @@ function formatDuration(minutes: number) {
 }
 
 function TaskForm() {
-  const { apiFetch } = useAuth()
+  const { apiFetch, logout } = useAuth()
   const [tasks, setTasks] = useState<Task[]>([])
   const [title, setTitle] = useState('')
   const [duration, setDuration] = useState('60')
   const [dueDate, setDueDate] = useState('')
   const [todoText, setTodoText] = useState('')
   const [error, setError] = useState('')
+  // 'failed' keeps "No tasks yet" from showing when the list just didn't load
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'failed'>('loading')
 
   useEffect(() => {
     apiFetch('/tasks')
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setTasks(data.tasks))
-      .catch(() => setError('Could not load tasks.'))
-  }, [apiFetch])
+      .then((res) => {
+        // Expired or invalid sign-in: clear the token so RequireAuth sends us to /login
+        if (res.status === 401) {
+          logout()
+          return Promise.reject()
+        }
+        return res.ok ? res.json() : Promise.reject()
+      })
+      .then((data) => {
+        setTasks(data.tasks)
+        setLoadState('loaded')
+      })
+      .catch(() => {
+        setError('Could not load tasks.')
+        setLoadState('failed')
+      })
+  }, [apiFetch, logout])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+
+    if (!title.trim()) {
+      setError('Title cannot be empty.')
+      return
+    }
 
     try {
       const res = await apiFetch('/tasks', {
@@ -58,8 +111,13 @@ function TaskForm() {
         }),
       })
 
+      if (res.status === 401) {
+        logout()
+        return
+      }
+
       if (!res.ok) {
-        setError('Could not save task.')
+        setError(await readErrorMessage(res, 'Could not save task.'))
         return
       }
 
@@ -81,7 +139,12 @@ function TaskForm() {
       <form className={styles.form} onSubmit={handleSubmit}>
         <label>
           Title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <input
+            value={title}
+            maxLength={TITLE_MAX}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
         </label>
         <label>
           Duration (minutes)
@@ -101,6 +164,7 @@ function TaskForm() {
           To-do
           <textarea
             rows={3}
+            maxLength={TODO_MAX}
             value={todoText}
             placeholder="What needs to get done?"
             onChange={(e) => setTodoText(e.target.value)}
@@ -112,7 +176,11 @@ function TaskForm() {
       {error && <p className={styles.error}>{error}</p>}
 
       <h2>Needs a slot</h2>
-      {unscheduled.length === 0 ? (
+      {loadState === 'loading' ? (
+        <p className={styles.empty}>Loading tasks…</p>
+      ) : loadState === 'failed' ? (
+        <p className={styles.empty}>Tasks couldn’t be loaded.</p>
+      ) : unscheduled.length === 0 ? (
         <p className={styles.empty}>No tasks yet.</p>
       ) : (
         <ul className={styles.list}>
