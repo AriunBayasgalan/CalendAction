@@ -20,6 +20,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function apiFetch(path: string, init: RequestInit = {}) {
     const headers = new Headers(init.headers)
     if (token) headers.set('Authorization', `Bearer ${token}`)
+    if (!headers.has('X-Timezone')) {
+      headers.set('X-Timezone', Intl.DateTimeFormat().resolvedOptions().timeZone)
+    }
 
     return fetch(`${API_BASE_URL}${path}`, { ...init, headers })
   }
