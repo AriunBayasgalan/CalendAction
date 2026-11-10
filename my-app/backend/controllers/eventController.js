@@ -3,27 +3,43 @@ import { z } from 'zod';
 import Event from '../models/Event.js';
 
 
+const dateValue = z
+  .union([z.iso.datetime({ offset: true, local: true }), z.iso.date()], {
+    error: 'Must put in a valid date',
+  })
+  .transform((s) => new Date(s));
 
 const eventFields = z.object({
   title: z.string().trim().min(1).max(200),
-  start: z.coerce.date(),
-  end: z.coerce.date(),
+  start: dateValue,
+  end: dateValue,
   location: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(2000).optional(),
 });
 
-// set as true if start or end are not defined or if end is after start
-const endAfterStart = (d) => !d.start || !d.end || d.end > d.start;
+// set as true if end is correctly not before start
+const endNotBeforeStart = (d) => !d.start || !d.end || d.end >= d.start;
 
 const createEventSchema = eventFields
   .strict() // rejects unknown keys, so a client can't send `owner`
-  .refine(endAfterStart, { message: "End must be after start", path: ["end"] });
+  .refine(endNotBeforeStart, { message: "End cannot be before start", path: ["end"] });
 
 const updateEventSchema = eventFields
   .partial()
   .strict()
   .refine((d) => Object.keys(d).length > 0, { message: "No fields to update" })
-  .refine(endAfterStart, { message: "End must be after start", path: ["end"] });
+  .refine(endNotBeforeStart, { message: "End cannot be before start", path: ["end"] });
+
+  const listQuerySchema = z
+  .object({
+    from: dateValue.optional(),
+    to: dateValue.optional(),
+  })
+  .refine((q) => !q.from || !q.to || q.from <= q.to, {
+    message: "from must not be after to",
+    path: ['to'],
+  });
+
 
 
 
@@ -34,11 +50,19 @@ const serverError = (res, err) => {
   res.status(500).json({ error: "Server error" });
 };
 
+const validationError = (res, zodError) => {
+  const { formErrors, fieldErrors } = z.flattenError(zodError);
+  res.status(400).json({
+    error: formErrors[0] || 'Validation failed',
+    details: fieldErrors,
+  });
+};
+
 
 
 export async function createEvent(req, res) {
   const parsed = createEventSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ errors: z.treeifyError(parsed.error) });
+  if (!parsed.success) return validationError(res, parsed.error);
 
   try {
     const event = await Event.create({ ...parsed.data, owner: req.user.id });
@@ -49,13 +73,31 @@ export async function createEvent(req, res) {
 }
 
 export async function listEvents(req, res) {
+    const parsed = listQuerySchema.safeParse(req.query);
+  if (!parsed.success) return validationError(res, parsed.error);
+
+  const { from, to } = parsed.data;
+  const conditions = [{ owner: req.user.id }];
+
+
+  if (to) conditions.push({ start: { $lt: to } });
+  if (from) {
+    conditions.push({
+      $or: [
+        { end: { $gt: from } },     // started before "from" and still running from jan to feb
+        { start: { $gte: from } },  // starts at/after "from" (covers 0-minute events)
+      ],
+    });
+  }
+
   try {
-    const list = await Event.find({ owner: req.user.id }).sort({ start: 1 });
+    const list = await Event.find({ $and: conditions }).sort({ start: 1 });
     res.json(list);
   } catch (err) {
     serverError(res, err);
   }
 }
+
 
 export async function getEvent(req, res) {
   if (!isValidObjectId(req.params.id)) return notFound(res);
@@ -73,7 +115,7 @@ export async function updateEvent(req, res) {
   if (!isValidObjectId(req.params.id)) return notFound(res);
 
   const parsed = updateEventSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ errors: z.treeifyError(parsed.error) });
+  if (!parsed.success) return validationError(res, parsed.error);
 
   try {
     const existing = await Event.findOne({ _id: req.params.id, owner: req.user.id });
@@ -85,7 +127,8 @@ export async function updateEvent(req, res) {
     if (end < start) {
       return res
         .status(400)
-        .json({ errors: { fieldErrors: { end: ["End cannot be before start"] } } });
+        .json({ error: 'End must not be before start', details: { end: ['End must not be before start']},
+        });
     }
 
     const updated = await Event.findOneAndUpdate(

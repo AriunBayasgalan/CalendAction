@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
+import TaskForm from '../components/TaskForm.tsx'
 import type { CalendarEvent } from '../components/events.ts'
 import WeekGrid from '../components/WeekGrid.tsx'
 import WeekHeader from '../components/WeekHeader.tsx'
@@ -76,7 +77,10 @@ function WeekPage() {
           </button>
         </div>
       )}
-      <WeekGrid weekStart={weekStart} now={now} events={result.events} />
+      <div className={styles.body}>
+        <WeekGrid weekStart={weekStart} now={now} events={result.events} />
+        <TaskForm />
+      </div>
     </div>
   )
 }

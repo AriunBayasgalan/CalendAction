@@ -4,6 +4,17 @@
   flex-direction: column;
 }
 
+/* Grid on the left, task panel on the right; stacked on narrow screens. */
+.body {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+  }
+}
+
 .notice {
   display: flex;
   align-items: center;
