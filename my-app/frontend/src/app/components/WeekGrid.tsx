@@ -10,6 +10,7 @@ import {
   formatWeekday,
   getWeekDays,
   isSameDay,
+  toIsoDate,
 } from './week.ts'
 import styles from './WeekGrid.module.css'
 
@@ -17,12 +18,6 @@ type WeekGridProps = {
   weekStart: Date
   now: Date
   events: CalendarEvent[]
-}
-
-function toIsoDate(date: Date) {
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
 }
 
 // "9:00 AM – 10:00 AM", "Mon 9:00 AM – Wed 5:00 PM" for multi-day events, "9:00 AM" for zero-minute ones

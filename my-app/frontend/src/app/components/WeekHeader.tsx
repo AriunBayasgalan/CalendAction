@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { formatWeekRange } from './week.ts'
 import styles from './WeekHeader.module.css'
 
@@ -7,6 +8,8 @@ type WeekHeaderProps = {
   onPrev: () => void
   onNext: () => void
   onToday: () => void
+  // Extra controls shown next to the Today button.
+  actions?: ReactNode
 }
 
 function WeekHeader({
@@ -15,6 +18,7 @@ function WeekHeader({
   onPrev,
   onNext,
   onToday,
+  actions,
 }: WeekHeaderProps) {
   return (
     <div className={styles.header}>
@@ -39,14 +43,17 @@ function WeekHeader({
           <span aria-hidden="true">›</span>
         </button>
       </div>
-      <button
-        type="button"
-        className={styles.today}
-        onClick={onToday}
-        disabled={isCurrentWeek}
-      >
-        Today
-      </button>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.today}
+          onClick={onToday}
+          disabled={isCurrentWeek}
+        >
+          Today
+        </button>
+        {actions}
+      </div>
     </div>
   )
 }

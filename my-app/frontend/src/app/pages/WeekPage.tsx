@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
+import AddClassDialog from '../components/AddClassDialog.tsx'
 import TaskForm from '../components/TaskForm.tsx'
 import type { CalendarEvent } from '../components/events.ts'
 import WeekGrid from '../components/WeekGrid.tsx'
@@ -55,14 +56,22 @@ function WeekPage() {
     return () => controller.abort()
   }, [apiFetch, weekStart, requestKey])
 
+  const isCurrentWeek = isSameDay(weekStart, startOfWeek(now))
+
   return (
     <div className={styles.page}>
       <WeekHeader
         weekStart={weekStart}
-        isCurrentWeek={isSameDay(weekStart, startOfWeek(now))}
+        isCurrentWeek={isCurrentWeek}
         onPrev={() => setWeekStart((week) => addWeeks(week, -1))}
         onNext={() => setWeekStart((week) => addWeeks(week, 1))}
         onToday={() => setWeekStart(startOfWeek(new Date()))}
+        actions={
+          <AddClassDialog
+            defaultDate={isCurrentWeek ? now : weekStart}
+            onCreated={() => setAttempt((n) => n + 1)}
+          />
+        }
       />
       {status === 'loading' && (
         <p role="status" className={styles.notice}>
