@@ -7,6 +7,7 @@ import eventRoutes from './routes/eventRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
 import requireAuth from './middleware/requireAuth.js';
 import healthRoutes from "./routes/health.routes.js";
+import ruleRoutes from "./routes/rule.routes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import User from './models/User.js';
 
@@ -39,6 +40,7 @@ app.get("/bad-request", (_req, _res, next) => {
 app.get("/crash", () => {
   throw new Error("Demo crash");
 });
+app.use("/rules", ruleRoutes);
 
 app.get('/auth/me', requireAuth, async (req, res) => {
   try {
@@ -53,8 +55,8 @@ app.get('/auth/me', requireAuth, async (req, res) => {
   }
 });
 app.use('/auth', authRoutes);
+app.use('/tasks', taskRoutes);
 app.use('/events', eventRoutes);
-app.use('/tasks', taskRoutes)
 
 app.use(notFound);
 //if there are no matches

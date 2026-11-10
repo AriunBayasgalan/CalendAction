@@ -4,6 +4,8 @@
   --gutter-width: 64px;
 
   flex: 1;
+  /* Lets the grid shrink and scroll sideways when it shares a row with the task panel. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-x: auto;
@@ -87,6 +89,33 @@
   }
 }
 
+.event {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 6px;
+  overflow: hidden;
+  /* Gap between side-by-side events */
+  border: 1px solid var(--bg);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.eventTitle,
+.eventTime {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventTitle {
+  font-weight: 600;
+}
+
 .nowLine {
   position: absolute;
   left: 0;
@@ -104,5 +133,29 @@
     height: 10px;
     border-radius: 50%;
     background: var(--accent);
+  }
+}
+
+/* Zero-minute event: a thin marker centered on its time instead of a block */
+.eventMarker {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+  padding: 0 4px;
+  overflow: hidden;
+  transform: translateY(-50%);
+  border-top: 2px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+
+  .eventTitle {
+    font-weight: 600;
   }
 }
