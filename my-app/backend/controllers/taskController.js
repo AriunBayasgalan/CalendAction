@@ -4,7 +4,7 @@ import Task from '../models/Task.js';
 import { findNextHole } from '../services/findNextHole.js';
 import { fetchEvents } from './eventController.js';
 import Rule from '../models/rule.model.js';
-import { parseDateOnlyEndOfDay, resolveTimeZone } from '../services/timeZone.js';
+import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
 
 // 1) 입력 검증 규칙
 // Unexpected fields are stripped (Zod's default): they are ignored, not rejected.
@@ -21,10 +21,13 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const dueDateInput = (timeZone) =>
     z
         .union([z.iso.date(), z.iso.datetime({ offset: true })])
-        .transform((value) => {
+        .transform((value, ctx) => {
             if (DATE_ONLY.test(value)) {
-                const end = parseDateOnlyEndOfDay(value, timeZone);
-                if (!end) throw new Error('Invalid due date');
+                const end = dueDateEndOfDay.fromDateOnly(value, timeZone);
+                if (!end) {
+                    ctx.addIssue({ code: 'custom', message: 'Invalid due date' });
+                    return z.NEVER;
+                }
                 return end;
             }
             return new Date(value);

@@ -10,6 +10,7 @@ process.env.JWT_SECRET = 'test-secret';
 const { default: taskRoutes } = await import('../routes/taskRoutes.js');
 const { notFound, errorHandler } = await import('../middleware/errorHandler.js');
 const { default: Task } = await import('../models/Task.js');
+const { dueDateEndOfDay } = await import('../services/timeZone.js');
 
 let mongod;
 let server;
@@ -178,6 +179,40 @@ describe('task validation', () => {
         });
         assert.equal(bad.status, 400);
         assert.equal(bad.json.error, 'Invalid time zone');
+    });
+
+    test('date-only dueDate on a DST-midnight spring-forward still returns 201', async () => {
+        const cairo = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-04-23' },
+            headers: { 'X-Timezone': 'Africa/Cairo' },
+        });
+        assert.equal(cairo.status, 201, cairo.text);
+        assert.equal(new Date(cairo.json.task.dueDate).toISOString(), '2026-04-23T21:59:59.999Z');
+
+        const havana = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-03-07' },
+            headers: { 'X-Timezone': 'America/Havana' },
+        });
+        assert.equal(havana.status, 201, havana.text);
+        assert.equal(new Date(havana.json.task.dueDate).toISOString(), '2026-03-08T04:59:59.999Z');
+    });
+
+    test('an impossible date-only conversion yields 400, not 500', async () => {
+        const original = dueDateEndOfDay.fromDateOnly;
+        dueDateEndOfDay.fromDateOnly = () => null;
+        try {
+            const res = await call('POST', '/tasks', {
+                user: userA,
+                body: { ...validTask, dueDate: '2026-04-23' },
+                headers: { 'X-Timezone': 'UTC' },
+            });
+            assert.equal(res.status, 400, res.text);
+            assert.equal(res.json.error, 'Invalid input');
+        } finally {
+            dueDateEndOfDay.fromDateOnly = original;
+        }
     });
 
     test('dueDate rejects numbers, garbage, and impossible dates', async () => {

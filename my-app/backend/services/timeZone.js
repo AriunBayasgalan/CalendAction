@@ -100,16 +100,32 @@ export function zonedDateTime(year, month, day, hour, minute, second = 0, millis
   return null;
 }
 
+// First existing wall time at or after 00:00 on this calendar day.
+// Needed when DST starts at midnight, so 00:00 itself does not exist
+// (e.g. Africa/Cairo 2026-04-24, America/Havana 2026-03-08).
+function startOfDayInTimeZone(year, month, day, timeZone) {
+  for (let minute = 0; minute < 24 * 60; minute++) {
+    const instant = zonedDateTime(
+      year,
+      month,
+      day,
+      Math.floor(minute / 60),
+      minute % 60,
+      0,
+      0,
+      timeZone,
+    );
+    if (instant) return instant;
+  }
+  return null;
+}
+
 export function endOfDayInTimeZone(year, month, day, timeZone) {
   const next = new Date(Date.UTC(year, month - 1, day + 1));
-  const startOfNext = zonedDateTime(
+  const startOfNext = startOfDayInTimeZone(
     next.getUTCFullYear(),
     next.getUTCMonth() + 1,
     next.getUTCDate(),
-    0,
-    0,
-    0,
-    0,
     timeZone,
   );
   if (!startOfNext) return null;
@@ -126,3 +142,8 @@ export function parseDateOnlyEndOfDay(value, timeZone) {
   const day = Number(match[3]);
   return endOfDayInTimeZone(year, month, day, timeZone);
 }
+
+// Mutable so tests can stub a failed conversion without rewriting ESM bindings.
+export const dueDateEndOfDay = {
+  fromDateOnly: parseDateOnlyEndOfDay,
+};

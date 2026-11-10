@@ -82,3 +82,25 @@ test('date-only due dates are the last millisecond of that day in the user zone'
   assert.equal(parts.minute, 59);
   assert.equal(parts.second, 59);
 });
+
+test('end of day is correct when the next midnight is skipped by DST', () => {
+  // Cairo springs forward at midnight on 24 Apr 2026; first valid time is 01:00.
+  const cairo = parseDateOnlyEndOfDay('2026-04-23', 'Africa/Cairo');
+  assert.ok(cairo);
+  assert.equal(cairo.toISOString(), '2026-04-23T21:59:59.999Z');
+  const cairoParts = zonedParts(cairo, 'Africa/Cairo');
+  assert.deepEqual(
+    [cairoParts.year, cairoParts.month, cairoParts.day, cairoParts.hour, cairoParts.minute, cairoParts.second],
+    [2026, 4, 23, 23, 59, 59],
+  );
+
+  // Havana springs forward at midnight on 8 Mar 2026; first valid time is 01:00.
+  const havana = parseDateOnlyEndOfDay('2026-03-07', 'America/Havana');
+  assert.ok(havana);
+  assert.equal(havana.toISOString(), '2026-03-08T04:59:59.999Z');
+  const havanaParts = zonedParts(havana, 'America/Havana');
+  assert.deepEqual(
+    [havanaParts.year, havanaParts.month, havanaParts.day, havanaParts.hour, havanaParts.minute, havanaParts.second],
+    [2026, 3, 7, 23, 59, 59],
+  );
+});
