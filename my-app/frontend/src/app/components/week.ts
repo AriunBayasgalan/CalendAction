@@ -1,5 +1,8 @@
 // Week helpers. Everything works in the browser's local timezone.
 
+// Visible grid hours. Mirrored by backend/services/dayWindow.js as the default
+// placement window when the user has no rules. A rule may allow times outside
+// this range; those blocks are not drawn on the grid yet.
 export const DAY_START_HOUR = 7
 export const DAY_END_HOUR = 22
 

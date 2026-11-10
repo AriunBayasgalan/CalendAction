@@ -4,6 +4,7 @@ import Task from '../models/Task.js';
 import { findNextHole } from '../services/findNextHole.js';
 import { fetchEvents } from './eventController.js';
 import Rule from '../models/rule.model.js';
+import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
 
 // 1) 입력 검증 규칙
 // Unexpected fields are stripped (Zod's default): they are ignored, not rejected.
@@ -11,24 +12,50 @@ import Rule from '../models/rule.model.js';
 const TITLE_MAX = 200;
 const TEXT_MAX = 2000;
 
-// dueDate must be an ISO date string ("2026-11-20" or "2026-11-20T17:00:00Z").
-// Numbers and other types are rejected. null means "no deadline".
-const dueDateInput = z
-    .union([z.iso.date(), z.iso.datetime({ offset: true })])
-    .transform((value) => new Date(value));
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-const taskInput = z.object({
-    title: z.string().trim().min(1).max(TITLE_MAX),
-    durationMinutes: z.number().int().positive(), // 0보다 커야 함
-    dueDate: dueDateInput.nullable().optional(),
-    notes: z.string().max(TEXT_MAX).optional(),
-    todoText: z.string().max(TEXT_MAX).optional(), // trim 없음: 입력한 그대로 저장
-});
+// dueDate must be an ISO date string ("2026-11-20" or "2026-11-20T17:00:00Z").
+// A date-only value means end of that day (23:59:59.999) in the user's time zone.
+// Datetimes are stored as the given instant. Numbers and other types are rejected.
+// null means "no deadline".
+const dueDateInput = (timeZone) =>
+    z
+        .union([z.iso.date(), z.iso.datetime({ offset: true })])
+        .transform((value, ctx) => {
+            if (DATE_ONLY.test(value)) {
+                const end = dueDateEndOfDay.fromDateOnly(value, timeZone);
+                if (!end) {
+                    ctx.addIssue({ code: 'custom', message: 'Invalid due date' });
+                    return z.NEVER;
+                }
+                return end;
+            }
+            return new Date(value);
+        });
+
+const taskInput = (timeZone) =>
+    z.object({
+        title: z.string().trim().min(1).max(TITLE_MAX),
+        durationMinutes: z.number().int().positive(), // 0보다 커야 함
+        dueDate: dueDateInput(timeZone).nullable().optional(),
+        notes: z.string().max(TEXT_MAX).optional(),
+        todoText: z.string().max(TEXT_MAX).optional(), // trim 없음: 입력한 그대로 저장
+    });
 
 // 수정할 때는 일부 필드만 보내도 되게 (but at least one known field is required)
-const taskUpdate = taskInput
-    .partial()
-    .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });
+const taskUpdate = (timeZone) =>
+    taskInput(timeZone)
+        .partial()
+        .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });
+
+const readTimeZone = (req, res) => {
+    const resolved = resolveTimeZone(req);
+    if (resolved.error) {
+        res.status(400).json({ error: resolved.error });
+        return null;
+    }
+    return resolved.timeZone;
+};
 
 // 2) 내 task 하나 찾기 (owner까지 같이 조건에 넣는 게 핵심)
 const findMyTask = (req) => {
@@ -38,7 +65,9 @@ const findMyTask = (req) => {
 
 // CREATE  POST /tasks
 export const createTask = async (req, res) => {
-    const parsed = taskInput.safeParse(req.body);
+    const timeZone = readTimeZone(req, res);
+    if (!timeZone) return;
+    const parsed = taskInput(timeZone).safeParse(req.body);
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid input', details: z.treeifyError(parsed.error) });
     }
@@ -63,7 +92,9 @@ export const getTask = async (req, res) => {
 
 // UPDATE  PATCH /tasks/:id
 export const updateTask = async (req, res) => {
-    const parsed = taskUpdate.safeParse(req.body);
+    const timeZone = readTimeZone(req, res);
+    if (!timeZone) return;
+    const parsed = taskUpdate(timeZone).safeParse(req.body);
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid input', details: z.treeifyError(parsed.error) });
     }
@@ -89,6 +120,9 @@ export const deleteTask = async (req, res) => {
 export const placeTask = async(req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
     try {
+        const timeZone = readTimeZone(req, res);
+        if (!timeZone) return;
+
         const task = await Task.findOne({ _id: req.params.id, owner: req.user.id });
         if (!task) return res.status(404).json({ error: "Task not found"});
         if (task.status == 'scheduled') return res.status(400).json({error: "Task is already scheduled"});
@@ -113,6 +147,7 @@ export const placeTask = async(req, res) => {
             rules,
             events: busy,
             from,
+            timeZone,
         });
         if (!result.found) {
         return res.status(409).json({ error: result.message });

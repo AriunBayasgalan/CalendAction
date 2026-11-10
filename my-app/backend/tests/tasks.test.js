@@ -10,6 +10,7 @@ process.env.JWT_SECRET = 'test-secret';
 const { default: taskRoutes } = await import('../routes/taskRoutes.js');
 const { notFound, errorHandler } = await import('../middleware/errorHandler.js');
 const { default: Task } = await import('../models/Task.js');
+const { dueDateEndOfDay } = await import('../services/timeZone.js');
 
 let mongod;
 let server;
@@ -19,8 +20,8 @@ const userA = new mongoose.Types.ObjectId().toString();
 const userB = new mongoose.Types.ObjectId().toString();
 const tokenFor = (id) => jwt.sign({ sub: id }, process.env.JWT_SECRET);
 
-async function call(method, path, { user, body } = {}) {
-    const headers = { 'Content-Type': 'application/json' };
+async function call(method, path, { user, body, headers: extraHeaders } = {}) {
+    const headers = { 'Content-Type': 'application/json', ...extraHeaders };
     if (user) headers.Authorization = `Bearer ${tokenFor(user)}`;
     const res = await fetch(`${baseUrl}${path}`, {
         method,
@@ -109,19 +110,109 @@ describe('task validation', () => {
     });
 
     test('dueDate accepts ISO date strings and null means no deadline', async () => {
+        // Date-only values are stored as end of that day in the default time zone (America/New_York).
         const dated = await call('POST', '/tasks', { user: userA, body: { ...validTask, dueDate: '2026-11-20' } });
         assert.equal(dated.status, 201);
-        assert.equal(new Date(dated.json.task.dueDate).toISOString(), '2026-11-20T00:00:00.000Z');
+        assert.equal(new Date(dated.json.task.dueDate).toISOString(), '2026-11-21T04:59:59.999Z');
 
         const withTime = await call('POST', '/tasks', {
             user: userA,
             body: { ...validTask, dueDate: '2026-11-20T17:00:00Z' },
         });
         assert.equal(withTime.status, 201);
+        assert.equal(new Date(withTime.json.task.dueDate).toISOString(), '2026-11-20T17:00:00.000Z');
 
         const none = await call('POST', '/tasks', { user: userA, body: { ...validTask, dueDate: null } });
         assert.equal(none.status, 201);
         assert.equal(none.json.task.dueDate, undefined);
+    });
+
+    test('date-only dueDate uses the user time zone from X-Timezone; datetimes are unchanged', async () => {
+        const et = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-11-20' },
+            headers: { 'X-Timezone': 'America/New_York' },
+        });
+        assert.equal(et.status, 201);
+        assert.equal(new Date(et.json.task.dueDate).toISOString(), '2026-11-21T04:59:59.999Z');
+
+        const pt = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-11-20' },
+            headers: { 'X-Timezone': 'America/Los_Angeles' },
+        });
+        assert.equal(pt.status, 201);
+        assert.equal(new Date(pt.json.task.dueDate).toISOString(), '2026-11-21T07:59:59.999Z');
+
+        const fromBody = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-11-20', timeZone: 'UTC' },
+        });
+        assert.equal(fromBody.status, 201);
+        assert.equal(new Date(fromBody.json.task.dueDate).toISOString(), '2026-11-20T23:59:59.999Z');
+        assert.equal(fromBody.json.task.timeZone, undefined);
+
+        const datetime = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-11-20T17:00:00Z' },
+            headers: { 'X-Timezone': 'America/Los_Angeles' },
+        });
+        assert.equal(datetime.status, 201);
+        assert.equal(new Date(datetime.json.task.dueDate).toISOString(), '2026-11-20T17:00:00.000Z');
+    });
+
+    test('PATCH date-only dueDate uses the user time zone; invalid time zones are rejected', async () => {
+        const created = await call('POST', '/tasks', { user: userA, body: validTask });
+        const id = created.json.task._id;
+        const patched = await call('PATCH', `/tasks/${id}`, {
+            user: userA,
+            body: { dueDate: '2026-11-20' },
+            headers: { 'X-Timezone': 'America/Los_Angeles' },
+        });
+        assert.equal(patched.status, 200);
+        assert.equal(new Date(patched.json.task.dueDate).toISOString(), '2026-11-21T07:59:59.999Z');
+
+        const bad = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-11-20' },
+            headers: { 'X-Timezone': 'Not/AZone' },
+        });
+        assert.equal(bad.status, 400);
+        assert.equal(bad.json.error, 'Invalid time zone');
+    });
+
+    test('date-only dueDate on a DST-midnight spring-forward still returns 201', async () => {
+        const cairo = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-04-23' },
+            headers: { 'X-Timezone': 'Africa/Cairo' },
+        });
+        assert.equal(cairo.status, 201, cairo.text);
+        assert.equal(new Date(cairo.json.task.dueDate).toISOString(), '2026-04-23T21:59:59.999Z');
+
+        const havana = await call('POST', '/tasks', {
+            user: userA,
+            body: { ...validTask, dueDate: '2026-03-07' },
+            headers: { 'X-Timezone': 'America/Havana' },
+        });
+        assert.equal(havana.status, 201, havana.text);
+        assert.equal(new Date(havana.json.task.dueDate).toISOString(), '2026-03-08T04:59:59.999Z');
+    });
+
+    test('an impossible date-only conversion yields 400, not 500', async () => {
+        const original = dueDateEndOfDay.fromDateOnly;
+        dueDateEndOfDay.fromDateOnly = () => null;
+        try {
+            const res = await call('POST', '/tasks', {
+                user: userA,
+                body: { ...validTask, dueDate: '2026-04-23' },
+                headers: { 'X-Timezone': 'UTC' },
+            });
+            assert.equal(res.status, 400, res.text);
+            assert.equal(res.json.error, 'Invalid input');
+        } finally {
+            dueDateEndOfDay.fromDateOnly = original;
+        }
     });
 
     test('dueDate rejects numbers, garbage, and impossible dates', async () => {
