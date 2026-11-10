@@ -71,6 +71,7 @@ function TaskForm() {
   const [editingId, setEditingId] = useState<string | null>(null)
   // 'failed' keeps "No tasks yet" from showing when the list just didn't load
   const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'failed'>('loading')
+  const [deletingIds, setDeletingIds] = useState<string[]>([])
 
   useEffect(() => {
     apiFetch('/tasks')
@@ -110,7 +111,11 @@ function TaskForm() {
   }
 
   async function handleDelete(id: string) {
+    if (deletingIds.includes(id)) return
+    if (!window.confirm('Delete this task?')) return
+
     setError('')
+    setDeletingIds((prev) => [...prev, id])
 
     try {
       const res = await apiFetch(`/tasks/${id}`, { method: 'DELETE' })
@@ -129,6 +134,8 @@ function TaskForm() {
       if (editingId === id) resetForm()
     } catch {
       setError('Could not delete task.')
+    } finally {
+      setDeletingIds((prev) => prev.filter((deletingId) => deletingId !== id))
     }
   }
 
@@ -246,8 +253,12 @@ function TaskForm() {
                 <button type="button" onClick={() => startEdit(task)}>
                   Edit
                 </button>
-                <button type="button" onClick={() => handleDelete(task._id)}>
-                  Delete
+                <button
+                  type="button"
+                  disabled={deletingIds.includes(task._id)}
+                  onClick={() => handleDelete(task._id)}
+                >
+                  {deletingIds.includes(task._id) ? 'Deleting…' : 'Delete'}
                 </button>
               </div>
             </li>

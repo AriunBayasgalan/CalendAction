@@ -30,7 +30,7 @@ function fromLocalInput(value: string) {
 }
 
 function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
-  const { apiFetch } = useAuth()
+  const { apiFetch, logout } = useAuth()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [errors, setErrors] = useState<ApiErrors>(NO_ERRORS)
   const [isBusy, setIsBusy] = useState(false)
@@ -53,6 +53,10 @@ function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
 
     try {
       const response = await apiFetch(path, init)
+      if (response.status === 401) {
+        logout()
+        return
+      }
       if (!response.ok) {
         const result: unknown = await response.json().catch(() => null)
         setErrors(readApiErrors(result, response.status))
@@ -163,11 +167,14 @@ function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
               type="button"
               className={styles.secondary}
               disabled={isBusy}
-              onClick={() => send(`/events/${event._id}`, { method: 'DELETE' })}
+              onClick={() => {
+                if (!window.confirm('Delete this event?')) return
+                send(`/events/${event._id}`, { method: 'DELETE' })
+              }}
             >
               Delete
             </button>
-            <button type="button" className={styles.secondary} onClick={close}>
+            <button type="button" className={styles.secondary} disabled={isBusy} onClick={close}>
               Cancel
             </button>
             <button type="submit" className={styles.primary} disabled={isBusy}>

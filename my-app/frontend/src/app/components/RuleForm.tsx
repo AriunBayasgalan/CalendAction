@@ -113,6 +113,7 @@ function RuleForm() {
 
   async function handleDelete(id: string) {
     if (deletingIds.includes(id)) return
+    if (!window.confirm('Delete this rule?')) return
 
     setError('')
     setDeletingIds((prev) => [...prev, id])
