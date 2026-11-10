@@ -8,10 +8,41 @@ const taskSchema = new mongoose.Schema(
         dueDate: { type: Date },
         notes: { type: String, default: '', maxlength: 2000 },
         todoText: { type: String, default: '', maxlength: 2000 },
-        status: { type: String, enum: ['unscheduled'], default: 'unscheduled' },
+        status: { type: String, enum: ['unscheduled', 'scheduled'], default: 'unscheduled' },
+        start: { type: Date },
+        end: { type: Date },
     },
     { timestamps: true }
 );
+
+taskSchema.pre('validate', function () {
+  if (this.status === 'scheduled') {
+    if (!this.start || !this.end) {
+      this.invalidate('start', 'Scheduled tasks require start and end');
+    } else if (this.end <= this.start) {
+      this.invalidate('end', 'end must be after start');
+    }
+  } else {
+    this.start = undefined;
+    this.end = undefined;
+  }
+});
+
+// pre('validate') does not run on findOneAndUpdate (used by placeTask), so enforce the same rules on the update itself
+taskSchema.pre('findOneAndUpdate', function () {
+  const update = this.getUpdate() || {};
+  const set = update.$set || update;
+  if (set.status === 'scheduled') {
+    const start = set.start ? new Date(set.start) : null;
+    const end = set.end ? new Date(set.end) : null;
+    if (!start || !end) throw new Error('Scheduled tasks require start and end');
+    if (end <= start) throw new Error('end must be after start');
+  } else if (set.status === 'unscheduled') {
+    delete set.start;
+    delete set.end;
+    update.$unset = { ...(update.$unset || {}), start: '', end: '' };
+  }
+});
 
 taskSchema.set('toJSON', {
     transform: (_doc, ret) => {
@@ -19,5 +50,7 @@ taskSchema.set('toJSON', {
         return ret;
     },
 });
+
+taskSchema.index({ owner: 1, start: 1 });
 
 export default mongoose.model('Task', taskSchema);

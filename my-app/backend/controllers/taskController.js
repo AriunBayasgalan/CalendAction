@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import Task from '../models/Task.js';
+import { findNextHole } from '../services/findNextHole.js';
+import { fetchEvents } from './eventController.js';
+import Rule from '../models/rule.model.js';
 
 // 1) 입력 검증 규칙
 // Unexpected fields are stripped (Zod's default): they are ignored, not rejected.
@@ -82,3 +85,52 @@ export const deleteTask = async (req, res) => {
     await task.deleteOne();
     return res.status(204).end();
 };
+
+export const placeTask = async(req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    try {
+        const task = await Task.findOne({ _id: req.params.id, owner: req.user.id });
+        if (!task) return res.status(404).json({ error: "Task not found"});
+        if (task.status == 'scheduled') return res.status(400).json({error: "Task is already scheduled"});
+
+        const from = new Date();
+        const to = new Date(from);
+        to.setDate(to.getDate() + 15); 
+        const events = await fetchEvents(req.user.id, {from, to}); // only getting events for the next two weeks
+        const scheduled = await Task.find({ // finding already scheduled tasks so we dont overwrite tasks
+            owner: req.user.id,
+            status: "scheduled",
+            _id: { $ne: task._id },
+            end: { $gt: from },
+        });
+
+        const busy = [...events, ...scheduled]; 
+        const rules = await Rule.find({owner: req.user.id})
+
+        const result = findNextHole({
+            durationMinutes: task.durationMinutes,
+            dueDate: task.dueDate,
+            rules,
+            events: busy,
+            from,
+        });
+        if (!result.found) {
+        return res.status(409).json({ error: result.message });
+        }
+        const updated = await Task.findOneAndUpdate(
+            { _id: task._id, owner: req.user.id, status: 'unscheduled' },
+            { $set: { start: result.start, end: result.end, status: 'scheduled' } },
+            { new: true, runValidators: true }
+        );
+
+        if (!updated) {
+        return res.status(409).json({ error: 'Task is already scheduled' });
+        }
+
+        return res.json(updated);
+
+    } catch (error) {
+        return res.status(500).json({error: "Server error"})
+    }
+
+}
