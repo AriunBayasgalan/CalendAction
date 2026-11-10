@@ -133,3 +133,27 @@
     background: var(--accent);
   }
 }
+
+/* Zero-minute event: a thin marker centered on its time instead of a block */
+.eventMarker {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+  padding: 0 4px;
+  overflow: hidden;
+  transform: translateY(-50%);
+  border-top: 2px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+
+  .eventTitle {
+    font-weight: 600;
+  }
+}

@@ -18,34 +18,51 @@ export type PlacedEvent = {
   // Overlapping events sit side by side: this one is in `lane` out of `lanes`.
   lane: number
   lanes: number
+  // Zero-minute events (start === end) have no height: they are drawn as a marker at `top`.
+  instant: boolean
 }
 
 function hourOf(date: Date) {
   return date.getHours() + date.getMinutes() / 60
 }
 
-// Events that start on `day`, clipped to the visible hours and split into lanes
-// so overlapping events stay visible instead of covering each other.
+// Events that overlap `day` (so multi-day events show on every day they cover), clipped to
+// the visible hours and split into lanes so overlapping events stay visible.
 export function layoutDay(events: CalendarEvent[], day: Date) {
   const placed: PlacedEvent[] = []
+  const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate())
+  const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
 
   for (const event of events) {
     const start = new Date(event.start)
     const end = new Date(event.end)
-    if (!isSameDay(start, day)) continue
+    const instant = start.getTime() === end.getTime()
 
-    const from = Math.max(hourOf(start), DAY_START_HOUR)
+    // A zero-minute event belongs to the day it happens on; others to every day they overlap.
+    const onDay = instant
+      ? start >= dayStart && start < dayEnd
+      : start < dayEnd && end > dayStart
+    if (!onDay) continue
+
+    const from = Math.max(isSameDay(start, day) ? hourOf(start) : 0, DAY_START_HOUR)
     const to = isSameDay(end, day) ? Math.min(hourOf(end), DAY_END_HOUR) : DAY_END_HOUR
-    if (to <= from) continue
+
+    if (instant) {
+      // Outside the visible hours there is nowhere to draw the marker.
+      if (hourOf(start) < DAY_START_HOUR || hourOf(start) > DAY_END_HOUR) continue
+    } else if (to <= from) {
+      continue
+    }
 
     placed.push({
       event,
       start,
       end,
       top: (from - DAY_START_HOUR) / HOURS.length,
-      height: (to - from) / HOURS.length,
+      height: instant ? 0 : (to - from) / HOURS.length,
       lane: 0,
       lanes: 1,
+      instant,
     })
   }
 

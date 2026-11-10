@@ -25,6 +25,13 @@ function toIsoDate(date: Date) {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
+// "9:00 AM – 10:00 AM", "Mon 9:00 AM – Wed 5:00 PM" for multi-day events, "9:00 AM" for zero-minute ones
+function formatEventTime(start: Date, end: Date, instant: boolean) {
+  if (instant) return formatTime(start)
+  if (isSameDay(start, end)) return `${formatTime(start)} – ${formatTime(end)}`
+  return `${formatWeekday(start)} ${formatTime(start)} – ${formatWeekday(end)} ${formatTime(end)}`
+}
+
 function WeekGrid({ weekStart, now, events }: WeekGridProps) {
   const days = getWeekDays(weekStart)
   const nowHours = now.getHours() + now.getMinutes() / 60
@@ -75,15 +82,15 @@ function WeekGrid({ weekStart, now, events }: WeekGridProps) {
               {HOURS.map((hour) => (
                 <div key={hour} className={styles.hourCell} />
               ))}
-              {layoutDay(events, day).map(({ event, start, end, top, height, lane, lanes }) => {
-                const time = `${formatTime(start)} – ${formatTime(end)}`
+              {layoutDay(events, day).map(({ event, start, end, top, height, lane, lanes, instant }) => {
+                const time = formatEventTime(start, end, instant)
                 return (
                   <div
                     key={event._id}
-                    className={styles.event}
+                    className={instant ? styles.eventMarker : styles.event}
                     style={{
                       top: `${top * 100}%`,
-                      height: `${height * 100}%`,
+                      ...(instant ? {} : { height: `${height * 100}%` }),
                       left: `${(lane / lanes) * 100}%`,
                       width: `${100 / lanes}%`,
                     }}
