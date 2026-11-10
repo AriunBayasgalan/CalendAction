@@ -13,7 +13,7 @@ import styles from './WeekPage.module.css'
 type LoadStatus = 'loading' | 'error' | 'ready'
 
 function WeekPage() {
-  const { apiFetch } = useAuth()
+  const { apiFetch, logout } = useAuth()
   const now = useNow()
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
   // The result remembers which request (week + attempt) it belongs to. While the current
@@ -43,6 +43,10 @@ function WeekPage() {
     async function loadEvents() {
       try {
         const res = await apiFetch(`/events?${params}`, { signal: controller.signal })
+        if (res.status === 401) {
+          logout()
+          return
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
         const data: CalendarEvent[] = await res.json()
@@ -57,7 +61,7 @@ function WeekPage() {
     loadEvents()
 
     return () => controller.abort()
-  }, [apiFetch, weekStart, requestKey])
+  }, [apiFetch, logout, weekStart, requestKey])
 
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(now))
 

@@ -24,7 +24,7 @@ async function readErrorMessage(res: Response, fallback: string) {
 }
 
 function RuleForm() {
-  const { apiFetch } = useAuth()
+  const { apiFetch, logout } = useAuth()
   const [rules, setRules] = useState<Rule[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -43,6 +43,11 @@ function RuleForm() {
       try {
         const res = await apiFetch('/rules', { signal: controller.signal })
 
+        if (res.status === 401) {
+          logout()
+          return
+        }
+
         if (!res.ok) {
           setError(await readErrorMessage(res, 'Could not load rules.'))
           return
@@ -59,7 +64,7 @@ function RuleForm() {
     loadRules()
 
     return () => controller.abort()
-  }, [apiFetch])
+  }, [apiFetch, logout])
 
   function startEdit(rule: Rule) {
     setError('')
@@ -91,6 +96,11 @@ function RuleForm() {
         body: JSON.stringify({ notBefore, notAfter, label }),
       })
 
+      if (res.status === 401) {
+        logout()
+        return
+      }
+
       if (!res.ok) {
         setError(await readErrorMessage(res, 'Could not save rule.'))
         return
@@ -120,6 +130,11 @@ function RuleForm() {
 
     try {
       const res = await apiFetch(`/rules/${id}`, { method: 'DELETE' })
+
+      if (res.status === 401) {
+        logout()
+        return
+      }
 
       if (!res.ok) {
         setError(await readErrorMessage(res, 'Could not delete rule.'))

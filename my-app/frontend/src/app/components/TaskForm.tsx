@@ -72,6 +72,7 @@ function TaskForm() {
   // 'failed' keeps "No tasks yet" from showing when the list just didn't load
   const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'failed'>('loading')
   const [deletingIds, setDeletingIds] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     apiFetch('/tasks')
@@ -141,12 +142,16 @@ function TaskForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (saving) return
+
     setError('')
 
     if (!title.trim()) {
       setError('Title cannot be empty.')
       return
     }
+
+    setSaving(true)
 
     try {
       const res = await apiFetch(editingId ? `/tasks/${editingId}` : '/tasks', {
@@ -180,6 +185,8 @@ function TaskForm() {
       resetForm()
     } catch {
       setError('Could not save task.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -222,7 +229,9 @@ function TaskForm() {
             onChange={(e) => setTodoText(e.target.value)}
           />
         </label>
-        <button type="submit">{editingId ? 'Save changes' : 'Add task'}</button>
+        <button type="submit" disabled={saving}>
+          {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add task'}
+        </button>
         {editingId && (
           <button type="button" className={styles.secondary} onClick={resetForm}>
             Cancel
@@ -230,7 +239,9 @@ function TaskForm() {
         )}
       </form>
 
-      {error && <p className={styles.error}>{error}</p>}
+      <div role="alert" aria-live="assertive" className={error ? styles.error : undefined}>
+        {error}
+      </div>
 
       <h2>Needs a slot</h2>
       {loadState === 'loading' ? (
