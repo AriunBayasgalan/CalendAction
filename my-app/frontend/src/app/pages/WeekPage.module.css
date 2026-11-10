@@ -14,3 +14,15 @@
     flex-direction: column;
   }
 }
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.error {
+  color: #d33;
+}
