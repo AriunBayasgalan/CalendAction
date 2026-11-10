@@ -1,0 +1,102 @@
+.panel {
+  flex: none;
+  align-self: flex-start;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-h);
+  }
+
+  @media (max-width: 900px) {
+    align-self: stretch;
+    width: auto;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+  }
+
+  input,
+  textarea {
+    font: inherit;
+    padding: 6px 8px;
+    color: var(--text-h);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  button {
+    font: inherit;
+    padding: 8px;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+}
+
+.error,
+.empty {
+  margin: 0;
+  font-size: 14px;
+}
+
+.error {
+  color: #d33;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.title {
+  color: var(--text-h);
+}
+
+.meta {
+  font-size: 12px;
+}
+
+.todo {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  color: var(--text-h);
+}
