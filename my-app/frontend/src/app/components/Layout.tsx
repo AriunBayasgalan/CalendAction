@@ -15,6 +15,9 @@ function Layout() {
           <NavLink to="/week" className={styles.link}>
             Week
           </NavLink>
+          <NavLink to="/rules" className={styles.link}>
+            Rules
+          </NavLink>
           {token ? (
             <button type="button" className={styles.link} onClick={logout}>
               Log out

@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import Layout from './components/Layout.tsx'
 import RequireAuth from './components/RequireAuth.tsx'
+import RuleForm from './components/RuleForm.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import WeekPage from './pages/WeekPage.tsx'
 
@@ -16,6 +17,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAuth>
             <WeekPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'rules',
+        element: (
+          <RequireAuth>
+            <RuleForm />
           </RequireAuth>
         ),
       },
