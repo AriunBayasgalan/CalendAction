@@ -31,13 +31,13 @@ export async function createRule(req, res) {
     });
   }
 
-  const rule = await Rule.create(result.data);
+  const rule = await Rule.create({ ...result.data, owner: req.user.id });
   res.status(201).json(rule);
 }
 
-// List all rules
+// List the signed-in user's rules
 export async function getRules(req, res) {
-  const rules = await Rule.find().sort({ createdAt: -1 });
+  const rules = await Rule.find({ owner: req.user.id }).sort({ createdAt: -1 });
   res.json(rules);
 }
 
@@ -61,7 +61,13 @@ export async function updateRule(req, res) {
     });
   }
 
-  const rule = await Rule.findByIdAndUpdate(id, result.data, { new: true });
+  // Scoped to the owner, so someone else's rule looks like it doesn't exist (404).
+  // runValidators makes the model-level checks run on updates too.
+  const rule = await Rule.findOneAndUpdate(
+    { _id: id, owner: req.user.id },
+    result.data,
+    { returnDocument: "after", runValidators: true },
+  );
 
   if (!rule) {
     return res.status(404).json({ error: "Rule not found" });
@@ -78,7 +84,7 @@ export async function deleteRule(req, res) {
     return res.status(400).json({ error: "Invalid rule id" });
   }
 
-  const rule = await Rule.findByIdAndDelete(id);
+  const rule = await Rule.findOneAndDelete({ _id: id, owner: req.user.id });
 
   if (!rule) {
     return res.status(404).json({ error: "Rule not found" });
