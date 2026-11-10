@@ -1,4 +1,5 @@
 import { Router } from "express";
+import requireAuth from "../middleware/requireAuth.js";
 import {
   createRule,
   getRules,
@@ -7,6 +8,9 @@ import {
 } from "../controllers/rule.controller.js";
 
 const router = Router();
+
+// Every rule route needs a signed-in user
+router.use(requireAuth);
 
 router.get("/", getRules);
 router.post("/", createRule);

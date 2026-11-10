@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import TaskForm from '../components/TaskForm.tsx'
 import WeekGrid from '../components/WeekGrid.tsx'
 import WeekHeader from '../components/WeekHeader.tsx'
 import { useNow } from '../components/useNow.ts'
@@ -18,7 +19,10 @@ function WeekPage() {
         onNext={() => setWeekStart((week) => addWeeks(week, 1))}
         onToday={() => setWeekStart(startOfWeek(new Date()))}
       />
-      <WeekGrid weekStart={weekStart} now={now} />
+      <div className={styles.body}>
+        <WeekGrid weekStart={weekStart} now={now} />
+        <TaskForm />
+      </div>
     </div>
   )
 }

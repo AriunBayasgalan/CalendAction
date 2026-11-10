@@ -3,11 +3,13 @@ import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
 import authRoutes from './routes/authRoutes.js';
+import eventRoutes from './routes/eventRoutes.js';
 import requireAuth from './middleware/requireAuth.js';
 import healthRoutes from "./routes/health.routes.js";
 import ruleRoutes from "./routes/rule.routes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import User from './models/User.js';
+import taskRoutes from './routes/taskRoutes.js';
 
 const port = Number(process.env.PORT) || 5000;
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -26,7 +28,6 @@ if (!process.env.JWT_SECRET) {
 app.get("/", (_req, res) => {
   res.status(200).type("text").send("200 OK");
 });
-app.use("/rules", ruleRoutes);
 
 app.use("/health", healthRoutes);
 //tells the server to use the imported file
@@ -39,6 +40,7 @@ app.get("/bad-request", (_req, _res, next) => {
 app.get("/crash", () => {
   throw new Error("Demo crash");
 });
+app.use("/rules", ruleRoutes);
 
 app.get('/auth/me', requireAuth, async (req, res) => {
   try {
@@ -53,6 +55,8 @@ app.get('/auth/me', requireAuth, async (req, res) => {
   }
 });
 app.use('/auth', authRoutes);
+app.use('/tasks', taskRoutes);
+app.use('/events', eventRoutes);
 
 app.use(notFound);
 //if there are no matches
