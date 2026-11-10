@@ -4,7 +4,8 @@
   "description": "CalendAction API",
   "scripts": {
     "dev": "node --watch server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -16,5 +17,8 @@
     "zod": "^4.6.5"
   },
   "type": "module",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "mongodb-memory-server": "^11.3.0"
+  }
 }

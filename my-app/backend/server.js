@@ -8,6 +8,7 @@ import requireAuth from './middleware/requireAuth.js';
 import healthRoutes from "./routes/health.routes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import User from './models/User.js';
+import taskRoutes from './routes/taskRoutes.js';
 
 const port = Number(process.env.PORT) || 5000;
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
@@ -52,6 +53,7 @@ app.get('/auth/me', requireAuth, async (req, res) => {
   }
 });
 app.use('/auth', authRoutes);
+app.use('/tasks', taskRoutes);
 app.use('/events', eventRoutes);
 
 app.use(notFound);
