@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
+import { toIsoDate } from './week.ts'
 import styles from './TaskForm.module.css'
 
 type Task = {
@@ -66,8 +67,12 @@ function TaskForm() {
   const [dueDate, setDueDate] = useState('')
   const [todoText, setTodoText] = useState('')
   const [error, setError] = useState('')
+  // The task loaded into the form for editing; null means the form adds a new task
+  const [editingId, setEditingId] = useState<string | null>(null)
   // 'failed' keeps "No tasks yet" from showing when the list just didn't load
   const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'failed'>('loading')
+  const [deletingIds, setDeletingIds] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     apiFetch('/tasks')
@@ -89,8 +94,56 @@ function TaskForm() {
       })
   }, [apiFetch, logout])
 
+  function startEdit(task: Task) {
+    setError('')
+    setEditingId(task._id)
+    setTitle(task.title)
+    setDuration(String(task.durationMinutes))
+    setDueDate(task.dueDate ? toIsoDate(new Date(task.dueDate)) : '')
+    setTodoText(task.todoText)
+  }
+
+  function resetForm() {
+    setEditingId(null)
+    setTitle('')
+    setDuration('60')
+    setDueDate('')
+    setTodoText('')
+  }
+
+  async function handleDelete(id: string) {
+    if (deletingIds.includes(id)) return
+    if (!window.confirm('Delete this task?')) return
+
+    setError('')
+    setDeletingIds((prev) => [...prev, id])
+
+    try {
+      const res = await apiFetch(`/tasks/${id}`, { method: 'DELETE' })
+
+      if (res.status === 401) {
+        logout()
+        return
+      }
+
+      if (!res.ok) {
+        setError(await readErrorMessage(res, 'Could not delete task.'))
+        return
+      }
+
+      setTasks((prev) => prev.filter((task) => task._id !== id))
+      if (editingId === id) resetForm()
+    } catch {
+      setError('Could not delete task.')
+    } finally {
+      setDeletingIds((prev) => prev.filter((deletingId) => deletingId !== id))
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (saving) return
+
     setError('')
 
     if (!title.trim()) {
@@ -98,15 +151,17 @@ function TaskForm() {
       return
     }
 
+    setSaving(true)
+
     try {
-      const res = await apiFetch('/tasks', {
-        method: 'POST',
+      const res = await apiFetch(editingId ? `/tasks/${editingId}` : '/tasks', {
+        method: editingId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
           durationMinutes: Number(duration),
-          // Due by the end of the chosen day in the user's timezone
-          dueDate: dueDate ? new Date(`${dueDate}T23:59`) : undefined,
+          // Due by the end of the chosen day in the user's timezone; null means no due date
+          dueDate: dueDate ? new Date(`${dueDate}T23:59`) : null,
           todoText,
         }),
       })
@@ -122,12 +177,16 @@ function TaskForm() {
       }
 
       const data = await res.json()
-      setTasks([data.task, ...tasks])
-      setTitle('')
-      setDueDate('')
-      setTodoText('')
+      setTasks((prev) =>
+        editingId
+          ? prev.map((task) => (task._id === data.task._id ? data.task : task))
+          : [data.task, ...prev],
+      )
+      resetForm()
     } catch {
       setError('Could not save task.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -135,7 +194,7 @@ function TaskForm() {
 
   return (
     <aside className={styles.panel}>
-      <h2>Add a task</h2>
+      <h2>{editingId ? 'Edit task' : 'Add a task'}</h2>
       <form className={styles.form} onSubmit={handleSubmit}>
         <label>
           Title
@@ -170,10 +229,19 @@ function TaskForm() {
             onChange={(e) => setTodoText(e.target.value)}
           />
         </label>
-        <button type="submit">Add task</button>
+        <button type="submit" disabled={saving}>
+          {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add task'}
+        </button>
+        {editingId && (
+          <button type="button" className={styles.secondary} onClick={resetForm}>
+            Cancel
+          </button>
+        )}
       </form>
 
-      {error && <p className={styles.error}>{error}</p>}
+      <div role="alert" aria-live="assertive" className={error ? styles.error : undefined}>
+        {error}
+      </div>
 
       <h2>Needs a slot</h2>
       {loadState === 'loading' ? (
@@ -192,6 +260,18 @@ function TaskForm() {
                 {task.dueDate && ` · Due ${dueFormat.format(new Date(task.dueDate))}`}
               </span>
               {task.todoText && <p className={styles.todo}>{task.todoText}</p>}
+              <div className={styles.cardActions}>
+                <button type="button" onClick={() => startEdit(task)}>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingIds.includes(task._id)}
+                  onClick={() => handleDelete(task._id)}
+                >
+                  {deletingIds.includes(task._id) ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
             </li>
           ))}
         </ul>

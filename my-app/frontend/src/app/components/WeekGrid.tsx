@@ -18,6 +18,7 @@ type WeekGridProps = {
   weekStart: Date
   now: Date
   events: CalendarEvent[]
+  onSelectEvent: (event: CalendarEvent) => void
 }
 
 // "9:00 AM – 10:00 AM", "Mon 9:00 AM – Wed 5:00 PM" for multi-day events, "9:00 AM" for zero-minute ones
@@ -27,7 +28,7 @@ function formatEventTime(start: Date, end: Date, instant: boolean) {
   return `${formatWeekday(start)} ${formatTime(start)} – ${formatWeekday(end)} ${formatTime(end)}`
 }
 
-function WeekGrid({ weekStart, now, events }: WeekGridProps) {
+function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
   const days = getWeekDays(weekStart)
   const nowHours = now.getHours() + now.getMinutes() / 60
   const showNowLine = nowHours >= DAY_START_HOUR && nowHours <= DAY_END_HOUR
@@ -80,9 +81,11 @@ function WeekGrid({ weekStart, now, events }: WeekGridProps) {
               {layoutDay(events, day).map(({ event, start, end, top, height, lane, lanes, instant }) => {
                 const time = formatEventTime(start, end, instant)
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={event._id}
                     className={instant ? styles.eventMarker : styles.event}
+                    onClick={() => onSelectEvent(event)}
                     style={{
                       top: `${top * 100}%`,
                       ...(instant ? {} : { height: `${height * 100}%` }),
@@ -93,7 +96,7 @@ function WeekGrid({ weekStart, now, events }: WeekGridProps) {
                   >
                     <span className={styles.eventTitle}>{event.title}</span>
                     <span className={styles.eventTime}>{time}</span>
-                  </div>
+                  </button>
                 )
               })}
               {isToday && showNowLine && (

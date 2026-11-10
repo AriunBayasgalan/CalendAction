@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import AddClassDialog from '../components/AddClassDialog.tsx'
+import EditEventDialog from '../components/EditEventDialog.tsx'
 import TaskForm from '../components/TaskForm.tsx'
 import type { CalendarEvent } from '../components/events.ts'
 import WeekGrid from '../components/WeekGrid.tsx'
@@ -12,7 +13,7 @@ import styles from './WeekPage.module.css'
 type LoadStatus = 'loading' | 'error' | 'ready'
 
 function WeekPage() {
-  const { apiFetch } = useAuth()
+  const { apiFetch, logout } = useAuth()
   const now = useNow()
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
   // The result remembers which request (week + attempt) it belongs to. While the current
@@ -24,6 +25,8 @@ function WeekPage() {
   })
   // Bumped by the Retry button to run the fetch again for the same week.
   const [attempt, setAttempt] = useState(0)
+  // The event open in the edit dialog, or null when it's closed.
+  const [editing, setEditing] = useState<CalendarEvent | null>(null)
 
   // Fetch only the selected week and refetch when it changes. The cleanup aborts the
   // previous request, so a slow response for an old week can't overwrite the current one.
@@ -40,6 +43,10 @@ function WeekPage() {
     async function loadEvents() {
       try {
         const res = await apiFetch(`/events?${params}`, { signal: controller.signal })
+        if (res.status === 401) {
+          logout()
+          return
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
         const data: CalendarEvent[] = await res.json()
@@ -54,7 +61,7 @@ function WeekPage() {
     loadEvents()
 
     return () => controller.abort()
-  }, [apiFetch, weekStart, requestKey])
+  }, [apiFetch, logout, weekStart, requestKey])
 
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(now))
 
@@ -87,9 +94,19 @@ function WeekPage() {
         </div>
       )}
       <div className={styles.body}>
-        <WeekGrid weekStart={weekStart} now={now} events={result.events} />
+        <WeekGrid
+          weekStart={weekStart}
+          now={now}
+          events={result.events}
+          onSelectEvent={setEditing}
+        />
         <TaskForm />
       </div>
+      <EditEventDialog
+        event={editing}
+        onClose={() => setEditing(null)}
+        onChanged={() => setAttempt((n) => n + 1)}
+      />
     </div>
   )
 }
