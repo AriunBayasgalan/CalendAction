@@ -24,33 +24,30 @@ export type ApiErrors = {
   fields: Partial<Record<EventField, string>>
 }
 
-// zod's treeifyError output: { errors: [...], properties: { title: { errors: [...] } } }
-type ErrorTree = {
-  errors?: string[]
-  properties?: Record<string, { errors?: string[] } | undefined>
-}
-
+// Error body from the API, e.g. validationError (zod flattenError):
+// { error: 'Validation failed', details: { end: ['End cannot be before start'] } }
 type ErrorBody = {
   error?: string
-  errors?: ErrorTree
+  details?: Record<string, string[] | undefined>
 }
 
 const KNOWN_FIELDS: EventField[] = ['title', 'start', 'end', 'location', 'notes']
 
 // Turns any non-2xx event response into messages the form can show.
 export function readApiErrors(body: unknown, status: number): ApiErrors {
-  const { error, errors } = (body ?? {}) as ErrorBody
-  const form = [...(errors?.errors ?? [])]
+  const { error, details } = (body ?? {}) as ErrorBody
+  const form: string[] = []
   const fields: ApiErrors['fields'] = {}
 
-  for (const [key, node] of Object.entries(errors?.properties ?? {})) {
-    const message = node?.errors?.[0]
+  for (const [key, messages] of Object.entries(details ?? {})) {
+    const message = messages?.[0]
     if (!message) continue
     if ((KNOWN_FIELDS as string[]).includes(key)) fields[key as EventField] = message
     else form.push(`${key}: ${message}`)
   }
 
-  if (error) form.push(error)
+  // With field errors, `error` is just the "Validation failed" summary, so skip it.
+  if (error && Object.keys(fields).length === 0) form.push(error)
   if (form.length === 0 && Object.keys(fields).length === 0) {
     form.push(`Something went wrong (${status}). Please try again.`)
   }
