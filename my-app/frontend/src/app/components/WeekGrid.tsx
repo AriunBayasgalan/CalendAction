@@ -80,22 +80,43 @@ function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
               ))}
               {layoutDay(events, day).map(({ event, start, end, top, height, lane, lanes, instant }) => {
                 const time = formatEventTime(start, end, instant)
+                const style = {
+                  top: `${top * 100}%`,
+                  ...(instant ? {} : { height: `${height * 100}%` }),
+                  left: `${(lane / lanes) * 100}%`,
+                  width: `${100 / lanes}%`,
+                }
+                const label = (
+                  <>
+                    <span className={styles.eventTitle}>{event.title}</span>
+                    <span className={styles.eventTime}>{time}</span>
+                  </>
+                )
+
+                // Placed tasks are only shown; events open the edit dialog when clicked
+                if (event.isTask) {
+                  return (
+                    <div
+                      key={event._id}
+                      className={styles.task}
+                      style={style}
+                      title={`Task: ${event.title}, ${time}`}
+                    >
+                      {label}
+                    </div>
+                  )
+                }
+
                 return (
                   <button
                     type="button"
                     key={event._id}
                     className={instant ? styles.eventMarker : styles.event}
                     onClick={() => onSelectEvent(event)}
-                    style={{
-                      top: `${top * 100}%`,
-                      ...(instant ? {} : { height: `${height * 100}%` }),
-                      left: `${(lane / lanes) * 100}%`,
-                      width: `${100 / lanes}%`,
-                    }}
+                    style={style}
                     title={`${event.title}, ${time}`}
                   >
-                    <span className={styles.eventTitle}>{event.title}</span>
-                    <span className={styles.eventTime}>{time}</span>
+                    {label}
                   </button>
                 )
               })}
