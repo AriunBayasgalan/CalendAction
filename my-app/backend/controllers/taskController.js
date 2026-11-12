@@ -117,6 +117,31 @@ export const deleteTask = async (req, res) => {
     return res.status(204).end();
 };
 
+export async function findSlotForTask(task, timeZone, ownerId, from = new Date()) {
+  const to = new Date(from);
+  to.setDate(to.getDate() + 15);
+
+  const [events, scheduled, rules] = await Promise.all([
+    fetchEvents(ownerId, { from, to }),
+    Task.find({
+      owner: ownerId,
+      status: "scheduled",
+      _id: { $ne: task._id }, // leaves the task's own old slot out
+      end: { $gt: from },
+    }),
+    Rule.find({ owner: ownerId }),
+  ]);
+
+  return findNextHole({
+    durationMinutes: task.durationMinutes,
+    dueDate: task.dueDate,
+    rules,
+    events: [...events, ...scheduled],
+    from,
+    timeZone,
+  });
+}
+
 export const placeTask = async(req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
     try {
@@ -127,28 +152,7 @@ export const placeTask = async(req, res) => {
         if (!task) return res.status(404).json({ error: "Task not found"});
         if (task.status == 'scheduled') return res.status(400).json({error: "Task is already scheduled"});
 
-        const from = new Date();
-        const to = new Date(from);
-        to.setDate(to.getDate() + 15); 
-        const events = await fetchEvents(req.user.id, {from, to}); // only getting events for the next two weeks
-        const scheduled = await Task.find({ // finding already scheduled tasks so we dont overwrite tasks
-            owner: req.user.id,
-            status: "scheduled",
-            _id: { $ne: task._id },
-            end: { $gt: from },
-        });
-
-        const busy = [...events, ...scheduled]; 
-        const rules = await Rule.find({owner: req.user.id})
-
-        const result = findNextHole({
-            durationMinutes: task.durationMinutes,
-            dueDate: task.dueDate,
-            rules,
-            events: busy,
-            from,
-            timeZone,
-        });
+        const result = await findSlotForTask(task, timeZone, req.user.id);
         if (!result.found) {
         return res.status(409).json({ error: result.message });
         }
@@ -165,7 +169,39 @@ export const placeTask = async(req, res) => {
         return res.json(updated);
 
     } catch (error) {
-        return res.status(500).json({error: "Server error"})
+        return res.status(500).json({error: "Server error"});
     }
 
+}
+
+export const skipTask = async(req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    try {
+        const timeZone = readTimeZone(req, res);
+        if (!timeZone) return;
+
+        const task = await Task.findOne({ _id: req.params.id, owner: req.user.id });
+        if (!task) return res.status(404).json({ error: "Task not found"});
+        if (task.status == 'unscheduled') return res.status(400).json({error: "Task is not scheduled"});
+        const from = new Date(Math.max(task.end.getTime(), Date.now()));
+
+        const result = await findSlotForTask(task, timeZone, req.user.id, from);
+        const filter = { _id: task._id, owner: req.user.id, status: "scheduled" };
+        const update = result.found
+        ? { $set: { start: result.start, end: result.end } }
+        : { $set: { status: "unscheduled" }, $unset: { start: 1, end: 1 } }; // removes start and end from the document
+
+        const updated = await Task.findOneAndUpdate(filter, update, {
+            new: true,
+            runValidators: true,
+            });
+        if (!updated) {
+        return res.status(409).json({ error: "Task changed, try again" });
+        }
+        return res.json(updated);
+
+    }
+    catch (error) {
+        return res.status(500).json({error: "Server error"});
+    }
 }
