@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
+import { placedFormat, scheduledTasks, skipMessage } from './tasks.ts'
 import { toIsoDate } from './week.ts'
 import styles from './TaskForm.module.css'
 
-type Task = {
+export type Task = {
   _id: string
   title: string
   durationMinutes: number
@@ -59,7 +60,12 @@ function formatDuration(minutes: number) {
   return [hours && `${hours} h`, rest && `${rest} min`].filter(Boolean).join(' ')
 }
 
-function TaskForm() {
+type TaskFormProps = {
+  // Gets the full task list whenever it changes, so the page can draw placed tasks on the grid.
+  onTasksChange: (tasks: Task[]) => void
+}
+
+function TaskForm({ onTasksChange }: TaskFormProps) {
   const { apiFetch, logout } = useAuth()
   const [tasks, setTasks] = useState<Task[]>([])
   const [title, setTitle] = useState('')
@@ -73,6 +79,18 @@ function TaskForm() {
   const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'failed'>('loading')
   const [deletingIds, setDeletingIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [placingIds, setPlacingIds] = useState<string[]>([])
+  // Why the last Place failed (e.g. no open time), shown on that task's card
+  const [placeError, setPlaceError] = useState<{ id: string; message: string } | null>(null)
+  // Where the last placed task went, since it may land in a week that isn't on screen
+  const [placedMessage, setPlacedMessage] = useState('')
+  const [skippingIds, setSkippingIds] = useState<string[]>([])
+  // Why the last Skip failed, shown on that task's card
+  const [skipError, setSkipError] = useState<{ id: string; message: string } | null>(null)
+
+  useEffect(() => {
+    onTasksChange(tasks)
+  }, [tasks, onTasksChange])
 
   useEffect(() => {
     apiFetch('/tasks')
@@ -140,6 +158,74 @@ function TaskForm() {
     }
   }
 
+  // Asks the API for the next open slot. On success the task becomes 'scheduled', leaves this
+  // list, and the page draws it on the grid.
+  async function handlePlace(id: string) {
+    if (placingIds.includes(id)) return
+
+    setPlaceError(null)
+    setPlacedMessage('')
+    setPlacingIds((prev) => [...prev, id])
+
+    try {
+      const res = await apiFetch(`/tasks/${id}/place`, { method: 'POST' })
+
+      if (res.status === 401) {
+        logout()
+        return
+      }
+
+      if (!res.ok) {
+        // 409 with "No open time this week or next" when nothing fits
+        setPlaceError({ id, message: await readErrorMessage(res, 'Could not place task.') })
+        return
+      }
+
+      const placed: Task = await res.json()
+      setTasks((prev) => prev.map((task) => (task._id === placed._id ? placed : task)))
+      if (editingId === id) resetForm()
+      if (placed.start) {
+        setPlacedMessage(`Placed “${placed.title}” on ${placedFormat.format(new Date(placed.start))}.`)
+      }
+    } catch {
+      setPlaceError({ id, message: 'Could not place task.' })
+    } finally {
+      setPlacingIds((prev) => prev.filter((placingId) => placingId !== id))
+    }
+  }
+
+  // Moves a placed task to the next open slot after its current one. The grid redraws from the
+  // updated task; if nothing later fits, the API unschedules it and it returns to "Needs a slot".
+  async function handleSkip(id: string) {
+    if (skippingIds.includes(id)) return
+
+    setSkipError(null)
+    setPlacedMessage('')
+    setSkippingIds((prev) => [...prev, id])
+
+    try {
+      const res = await apiFetch(`/tasks/${id}/skip`, { method: 'POST' })
+
+      if (res.status === 401) {
+        logout()
+        return
+      }
+
+      if (!res.ok) {
+        setSkipError({ id, message: await readErrorMessage(res, 'Could not skip task.') })
+        return
+      }
+
+      const skipped: Task = await res.json()
+      setTasks((prev) => prev.map((task) => (task._id === skipped._id ? skipped : task)))
+      setPlacedMessage(skipMessage(skipped))
+    } catch {
+      setSkipError({ id, message: 'Could not skip task.' })
+    } finally {
+      setSkippingIds((prev) => prev.filter((skippingId) => skippingId !== id))
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (saving) return
@@ -191,6 +277,7 @@ function TaskForm() {
   }
 
   const unscheduled = tasks.filter((task) => task.status === 'unscheduled')
+  const scheduled = scheduledTasks(tasks)
 
   return (
     <aside className={styles.panel}>
@@ -244,6 +331,11 @@ function TaskForm() {
       </div>
 
       <h2>Needs a slot</h2>
+      {placedMessage && (
+        <p role="status" className={styles.placed}>
+          {placedMessage}
+        </p>
+      )}
       {loadState === 'loading' ? (
         <p className={styles.empty}>Loading tasks…</p>
       ) : loadState === 'failed' ? (
@@ -260,7 +352,20 @@ function TaskForm() {
                 {task.dueDate && ` · Due ${dueFormat.format(new Date(task.dueDate))}`}
               </span>
               {task.todoText && <p className={styles.todo}>{task.todoText}</p>}
+              {placeError?.id === task._id && (
+                <p role="alert" className={styles.error}>
+                  {placeError.message}
+                </p>
+              )}
               <div className={styles.cardActions}>
+                <button
+                  type="button"
+                  className={styles.place}
+                  disabled={placingIds.includes(task._id)}
+                  onClick={() => handlePlace(task._id)}
+                >
+                  {placingIds.includes(task._id) ? 'Placing…' : 'Place'}
+                </button>
                 <button type="button" onClick={() => startEdit(task)}>
                   Edit
                 </button>
@@ -275,6 +380,37 @@ function TaskForm() {
             </li>
           ))}
         </ul>
+      )}
+
+      {scheduled.length > 0 && (
+        <>
+          <h2>Scheduled</h2>
+          <ul className={styles.list}>
+            {scheduled.map((task) => (
+              <li key={task._id} className={styles.card}>
+                <strong className={styles.title}>{task.title}</strong>
+                <span className={styles.meta}>
+                  {placedFormat.format(new Date(task.start!))} ·{' '}
+                  {formatDuration(task.durationMinutes)}
+                </span>
+                {skipError?.id === task._id && (
+                  <p role="alert" className={styles.error}>
+                    {skipError.message}
+                  </p>
+                )}
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    disabled={skippingIds.includes(task._id)}
+                    onClick={() => handleSkip(task._id)}
+                  >
+                    {skippingIds.includes(task._id) ? 'Skipping…' : 'Skip'}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </aside>
   )
