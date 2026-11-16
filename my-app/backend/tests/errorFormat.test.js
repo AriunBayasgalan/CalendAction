@@ -264,9 +264,16 @@ describe('malformed ids are 400 Invalid id', () => {
             ['PUT', `/rules/${id}`, { notBefore: '09:00', notAfter: '17:00' }],
             ['DELETE', `/rules/${id}`],
         ];
+        const expected = (path) => {
+            if (path.startsWith('/events/')) return 'Event not found';
+            if (path.startsWith('/tasks/')) return 'Task not found';
+            if (path.startsWith('/rules/')) return 'Rule not found';
+            return null;
+        };
         for (const [method, path, body] of cases) {
             const res = await call(method, path, { body });
             assertErrorShape(res, 404);
+            assert.equal(res.json.error, expected(path));
         }
     });
 });

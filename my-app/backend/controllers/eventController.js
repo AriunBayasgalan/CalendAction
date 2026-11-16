@@ -52,7 +52,7 @@ const updateEventSchema = eventFields
 
 
 
-const notFound = (res) => res.status(404).json({ error: "Not found" });
+const notFound = (res) => res.status(404).json({ error: "Event not found" });
 
 const serverError = (res, err) => {
   console.error(err);
