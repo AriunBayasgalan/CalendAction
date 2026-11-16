@@ -1,20 +1,18 @@
 import { z } from 'zod';
 import Task from '../models/Task.js';
-import { findNextHole } from '../services/findNextHole.js';
-import { fetchEvents } from './eventController.js';
-import Rule from '../models/rule.model.js';
-import Event from '../models/Event.js';
 import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
 import { withOwnerLock } from '../services/ownerLock.js';
 import { sendValidationError } from '../services/apiErrors.js';
 import { hasValidId } from '../middleware/requireValidId.js';
+import {
+    MAX_SLOT_ATTEMPTS,
+    NO_OPEN_TIME,
+    findSlotForTask,
+    overlapsOtherBlock,
+    rePlaceOrUnschedule,
+} from '../services/placement.js';
 
-// How many slots place/skip try when a write turns out to overlap something
-// another request wrote at the same moment.
-const MAX_SLOT_ATTEMPTS = 3;
-const NO_OPEN_TIME = 'No open time this week or next';
-
-// 1) 입력 검증 규칙
+// Input validation
 // Unexpected fields are stripped (Zod's default): they are ignored, not rejected.
 // Text lengths are capped here and mirrored as maxlength in the Task model.
 const TITLE_MAX = 200;
@@ -44,13 +42,13 @@ const dueDateInput = (timeZone) =>
 const taskInput = (timeZone) =>
     z.object({
         title: z.string().trim().min(1).max(TITLE_MAX),
-        durationMinutes: z.number().int().positive(), // 0보다 커야 함
+        durationMinutes: z.number().int().positive(), // must be greater than 0
         dueDate: dueDateInput(timeZone).nullable().optional(),
         notes: z.string().max(TEXT_MAX).optional(),
-        todoText: z.string().max(TEXT_MAX).optional(), // trim 없음: 입력한 그대로 저장
+        todoText: z.string().max(TEXT_MAX).optional(), // not trimmed: stored as entered
     });
 
-// 수정할 때는 일부 필드만 보내도 되게 (but at least one known field is required)
+// Updates may send only some fields, but at least one known field is required
 const taskUpdate = (timeZone) =>
     taskInput(timeZone)
         .partial()
@@ -65,7 +63,7 @@ const readTimeZone = (req, res) => {
     return resolved.timeZone;
 };
 
-// 2) 내 task 하나 찾기 (owner까지 같이 조건에 넣는 게 핵심)
+// Find one of the signed-in user's tasks; the query always includes owner
 const findMyTask = (req) => {
     return Task.findOne({ _id: req.params.id, owner: req.user.id });
 };
@@ -84,13 +82,13 @@ export const createTask = async (req, res) => {
     return res.status(201).json({ task });
 };
 
-// READ 목록  GET /tasks
+// GET /tasks
 export const listTasks = async (req, res) => {
     const tasks = await Task.find({ owner: req.user.id }).sort({ createdAt: -1 });
     return res.json({ tasks });
 };
 
-// READ 하나  GET /tasks/:id
+// GET /tasks/:id
 export const getTask = async (req, res) => {
     const task = await findMyTask(req);
     if (!task) return res.status(404).json({ error: 'Task not found' });
@@ -137,24 +135,8 @@ export const updateTask = async (req, res) => {
         const ownerId = req.user.id;
         try {
             return await withOwnerLock(ownerId, async () => {
-                for (let attempt = 0; attempt < MAX_SLOT_ATTEMPTS; attempt++) {
-                    const result = await findSlotForTask(task, timeZone, ownerId);
-                    if (!result.found) break;
-
-                    task.start = result.start;
-                    task.end = result.end;
-                    task.status = 'scheduled';
-                    await task.save();
-
-                    if (!(await overlapsOtherBlock(ownerId, task._id, result.start, result.end))) {
-                        return res.json({ task, moved: true });
-                    }
-                    // Another write took this slot at the same moment: try the next one.
-                }
-
-                task.status = 'unscheduled';
-                await task.save();
-                return res.json({ task });
+                const result = await rePlaceOrUnschedule(task, timeZone, ownerId);
+                return res.json(result.moved ? { task: result.task, moved: true } : { task: result.task });
             });
         } catch (error) {
             console.error('updateTask', error);
@@ -173,48 +155,6 @@ export const deleteTask = async (req, res) => {
     await task.deleteOne();
     return res.status(204).end();
 };
-
-export async function findSlotForTask(task, timeZone, ownerId, from = new Date()) {
-  const to = new Date(from);
-  to.setDate(to.getDate() + 15);
-
-  const [events, scheduled, rules] = await Promise.all([
-    fetchEvents(ownerId, { from, to }),
-    Task.find({
-      owner: ownerId,
-      status: "scheduled",
-      _id: { $ne: task._id }, // leaves the task's own old slot out
-      end: { $gt: from },
-    }),
-    Rule.find({ owner: ownerId }),
-  ]);
-
-  return findNextHole({
-    durationMinutes: task.durationMinutes,
-    dueDate: task.dueDate,
-    rules,
-    events: [...events, ...scheduled],
-    from,
-    timeZone,
-  });
-}
-
-// True if [start, end) overlaps another scheduled task or an event of this owner.
-// Runs after a write, to catch a conflicting write that raced this one (e.g. from
-// another server instance, which the in-process lock can't see).
-async function overlapsOtherBlock(ownerId, taskId, start, end) {
-  const [task, event] = await Promise.all([
-    Task.exists({
-      owner: ownerId,
-      status: 'scheduled',
-      _id: { $ne: taskId },
-      start: { $lt: end },
-      end: { $gt: start },
-    }),
-    Event.exists({ owner: ownerId, start: { $lt: end }, end: { $gt: start } }),
-  ]);
-  return Boolean(task || event);
-}
 
 export const placeTask = async (req, res) => {
     if (!hasValidId(req, res)) return;

@@ -98,6 +98,17 @@ export function layoutDay(events: CalendarEvent[], day: Date) {
   return placed
 }
 
+export type TaskPlacement = {
+  title: string
+  start?: string
+  end?: string
+}
+
+export type EventSaveResult = CalendarEvent & {
+  moved?: TaskPlacement[]
+  unscheduled?: TaskPlacement[]
+}
+
 export type NewEvent = {
   title: string
   start: string

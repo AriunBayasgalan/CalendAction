@@ -5,7 +5,7 @@ import requireValidId from '../middleware/requireValidId.js';
 
 const router = Router();
 
-router.use(requireAuth); // 아래 모든 라우트는 로그인 필요
+router.use(requireAuth); // every route below requires a signed-in user
 
 router.post('/', createTask);
 router.post('/:id/place', requireValidId, placeTask)
