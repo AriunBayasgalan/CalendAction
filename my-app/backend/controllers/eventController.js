@@ -4,6 +4,7 @@ import { sendValidationError } from '../services/apiErrors.js';
 import { fetchEvents } from '../services/eventQuery.js';
 import { withOwnerLock } from '../services/ownerLock.js';
 import { defaultTimeZone, resolveTimeZone } from '../services/timeZone.js';
+import { markStarted } from '../services/startBlock.js';
 import {
   evictOverlappingTasks,
   findOverlappingEvent,
@@ -165,7 +166,8 @@ export async function updateEvent(req, res) {
 
       const updated = await Event.findOneAndUpdate(
         { _id: existing._id, owner: ownerId },
-        { $set: parsed.data },
+        // A start belongs to one time slot (CA-25), so a new time clears it
+        { $set: parsed.data, $unset: { startedAt: '' } },
         { returnDocument: "after", runValidators: true }
         // returns updated object and validates schema model -- does not run the pre validate hooks
       );
@@ -173,6 +175,19 @@ export async function updateEvent(req, res) {
       const placements = await evictOverlappingTasks(ownerId, updated, timeZone);
       res.json(eventPayload(updated, placements));
     });
+  } catch (err) {
+    serverError(res, err);
+  }
+}
+
+// POST /events/:id/start (CA-25). The rules are in services/startBlock.js.
+export async function startEvent(req, res) {
+  try {
+    const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!event) return notFound(res);
+    const result = await markStarted(Event, event, timeZoneOf(req));
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.json(result.block);
   } catch (err) {
     serverError(res, err);
   }

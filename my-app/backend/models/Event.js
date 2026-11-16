@@ -7,6 +7,9 @@ const eventSchema = new mongoose.Schema(
     end: { type: Date, required: true },
     location: { type: String, trim: true, maxlength: 200 },
     notes: { type: String, trim: true, maxlength: 2000 },
+    // When the user pressed Start on this block (CA-25); only POST /events/:id/start sets it,
+    // and updateEvent clears it when the class gets a new time
+    startedAt: { type: Date },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   },
   { timestamps: true }

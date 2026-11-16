@@ -132,6 +132,17 @@ export function endOfDayInTimeZone(year, month, day, timeZone) {
   return new Date(startOfNext.getTime() - 1);
 }
 
+// The calendar day in `timeZone` that `date` falls on, as [start, end): end is the
+// start of the next day. Used to check that a block is started on its own day (CA-25).
+export function dayContaining(date, timeZone) {
+  const { year, month, day } = zonedParts(date, timeZone);
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  return {
+    start: startOfDayInTimeZone(year, month, day, timeZone),
+    end: startOfDayInTimeZone(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate(), timeZone),
+  };
+}
+
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export function parseDateOnlyEndOfDay(value, timeZone) {
