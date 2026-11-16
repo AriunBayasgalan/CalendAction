@@ -1,3 +1,4 @@
+import { parseApiError } from './apiErrors.ts'
 import { GRID_END_HOUR, GRID_START_HOUR, HOURS, isSameDay } from './week.ts'
 
 export type CalendarEvent = {
@@ -112,26 +113,23 @@ export type ApiErrors = {
   fields: Partial<Record<EventField, string>>
 }
 
-// Error body from the API, e.g. validationError (zod flattenError):
-// { error: 'Validation failed', details: { end: ['End cannot be before start'] } }
-type ErrorBody = {
-  error?: string
-  details?: Record<string, string[] | undefined>
-}
-
 const KNOWN_FIELDS: EventField[] = ['title', 'start', 'end', 'location', 'notes']
 
-// Turns any non-2xx event response into messages the form can show.
+// Turns any non-2xx event response into messages the form can show. Field errors
+// go next to their input; anything else (including problems with fields the form
+// has no input for) is shown at the top of the form.
 export function readApiErrors(body: unknown, status: number): ApiErrors {
-  const { error, details } = (body ?? {}) as ErrorBody
+  const { error, details } = parseApiError(body)
   const form: string[] = []
   const fields: ApiErrors['fields'] = {}
 
-  for (const [key, messages] of Object.entries(details ?? {})) {
-    const message = messages?.[0]
-    if (!message) continue
-    if ((KNOWN_FIELDS as string[]).includes(key)) fields[key as EventField] = message
-    else form.push(`${key}: ${message}`)
+  for (const { field, message } of details) {
+    if ((KNOWN_FIELDS as string[]).includes(field)) {
+      // Keep the first message per field
+      fields[field as EventField] ??= message
+    } else {
+      form.push(field ? `${field}: ${message}` : message)
+    }
   }
 
   // With field errors, `error` is just the "Validation failed" summary, so skip it.

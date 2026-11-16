@@ -1,6 +1,7 @@
 import { isValidObjectId } from 'mongoose';
 import { z } from 'zod';
 import Event from '../models/Event.js';
+import { sendValidationError } from '../services/apiErrors.js';
 
 
 const dateValue = z
@@ -50,13 +51,7 @@ const serverError = (res, err) => {
   res.status(500).json({ error: "Server error" });
 };
 
-const validationError = (res, zodError) => {
-  const { formErrors, fieldErrors } = z.flattenError(zodError);
-  res.status(400).json({
-    error: formErrors[0] || 'Validation failed',
-    details: fieldErrors,
-  });
-};
+const validationError = (res, zodError) => sendValidationError(res, zodError, 'Validation failed');
 
 
 
@@ -128,10 +123,10 @@ export async function updateEvent(req, res) {
     const start = parsed.data.start ?? existing.start;
     const end = parsed.data.end ?? existing.end;
     if (end < start) {
-      return res
-        .status(400)
-        .json({ error: 'End must not be before start', details: { end: ['End must not be before start']},
-        });
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: [{ field: 'end', message: 'End must not be before start' }],
+      });
     }
 
     const updated = await Event.findOneAndUpdate(

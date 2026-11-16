@@ -7,6 +7,7 @@ import Rule from '../models/rule.model.js';
 import Event from '../models/Event.js';
 import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
 import { withOwnerLock } from '../services/ownerLock.js';
+import { sendValidationError } from '../services/apiErrors.js';
 
 // How many slots place/skip try when a write turns out to overlap something
 // another request wrote at the same moment.
@@ -76,7 +77,7 @@ export const createTask = async (req, res) => {
     if (!timeZone) return;
     const parsed = taskInput(timeZone).safeParse(req.body);
     if (!parsed.success) {
-        return res.status(400).json({ error: 'Invalid input', details: z.treeifyError(parsed.error) });
+        return sendValidationError(res, parsed.error, 'Invalid input');
     }
     const { dueDate, ...rest } = parsed.data;
     // null (or missing) dueDate means no deadline: leave the field unset
@@ -103,7 +104,7 @@ export const updateTask = async (req, res) => {
     if (!timeZone) return;
     const parsed = taskUpdate(timeZone).safeParse(req.body);
     if (!parsed.success) {
-        return res.status(400).json({ error: 'Invalid input', details: z.treeifyError(parsed.error) });
+        return sendValidationError(res, parsed.error, 'Invalid input');
     }
     const task = await findMyTask(req);
     if (!task) return res.status(404).json({ error: 'Task not found' });

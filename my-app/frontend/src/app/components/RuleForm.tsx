@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
+import { readErrorMessage } from './apiErrors.ts'
 import styles from './RuleForm.module.css'
 
 type Rule = {
@@ -8,19 +9,6 @@ type Rule = {
   notBefore: string
   notAfter: string
   label?: string
-}
-
-// Reads an error message from a failed response without assuming it is JSON.
-// Plain text, HTML (e.g. a proxy error page), or an empty body fall back to `fallback`.
-async function readErrorMessage(res: Response, fallback: string) {
-  if (!res.headers.get('content-type')?.includes('application/json')) return fallback
-
-  try {
-    const data = await res.json()
-    return data?.details?.[0]?.message ?? data?.error ?? fallback
-  } catch {
-    return fallback
-  }
 }
 
 function RuleForm() {

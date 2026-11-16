@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
+import { readErrorMessage } from './apiErrors.ts'
 import { placedFormat, scheduledTasks, skipMessage } from './tasks.ts'
 import { toIsoDate } from './week.ts'
 import styles from './TaskForm.module.css'
@@ -20,32 +21,6 @@ export type Task = {
 // Same limits as the API (CA-10)
 const TITLE_MAX = 200
 const TODO_MAX = 2000
-
-// Pulls the first validation message out of an error response without assuming its shape.
-// Handles Zod's treeified `details` ({ errors, properties: { field: { errors } } }),
-// a `details: [{ message }]` list, and a plain `{ error }` string.
-async function readErrorMessage(res: Response, fallback: string) {
-  if (!res.headers.get('content-type')?.includes('application/json')) return fallback
-
-  try {
-    const data = await res.json()
-    const details = data?.details
-    const fieldErrors = details?.properties
-      ? Object.values(details.properties as Record<string, { errors?: string[] }>).flatMap(
-          (field) => field?.errors ?? [],
-        )
-      : []
-    return (
-      fieldErrors[0] ??
-      details?.errors?.[0] ??
-      (Array.isArray(details) ? details[0]?.message : undefined) ??
-      data?.error ??
-      fallback
-    )
-  } catch {
-    return fallback
-  }
-}
 
 const dueFormat = new Intl.DateTimeFormat(undefined, {
   weekday: 'short',

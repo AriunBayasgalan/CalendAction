@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../../contexts/auth.ts'
+import { firstErrorMessage } from '../components/apiErrors.ts'
 
 type AuthResponse = {
   token?: string
-  error?: string
 }
 
 function LoginPage() {
@@ -30,12 +30,13 @@ function LoginPage() {
           password: formData.get('password'),
         }),
       })
-      const result = (await response.json()) as AuthResponse
-      if (!response.ok || !result.token) {
-        throw new Error(result.error ?? 'Unable to authenticate.')
+      const result: unknown = await response.json().catch(() => null)
+      const token = (result as AuthResponse | null)?.token
+      if (!response.ok || !token) {
+        throw new Error(firstErrorMessage(result, 'Unable to authenticate.'))
       }
 
-      setToken(result.token)
+      setToken(token)
       const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
       navigate(destination ?? '/week', { replace: true })
     } catch (submitError) {
