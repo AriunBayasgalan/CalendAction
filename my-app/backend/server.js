@@ -30,16 +30,6 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/health", healthRoutes);
-//tells the server to use the imported file
-app.get("/bad-request", (_req, _res, next) => {
-  const err = new Error("Bad request");
-  err.status = 400;
-  next(err);
-});
-// Demo route: deliberately crashes so the 500 handler can be seen
-app.get("/crash", () => {
-  throw new Error("Demo crash");
-});
 app.use("/rules", ruleRoutes);
 
 app.get('/auth/me', requireAuth, async (req, res) => {
