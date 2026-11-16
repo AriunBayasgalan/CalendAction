@@ -12,6 +12,8 @@ export type CalendarEvent = {
   isTask?: boolean
   // A placed task's to-do, exactly as typed in the task form
   todoText?: string
+  // CA-24: indexes of the to-do lines (split on "\n") that are checked off
+  todoDone?: number[]
 }
 
 export type PlacedEvent = {

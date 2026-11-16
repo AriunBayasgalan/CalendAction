@@ -45,10 +45,20 @@ function WeekPage() {
             end: task.end,
             isTask: true,
             todoText: task.todoText,
+            todoDone: task.todoDone,
           },
         ]
       : [],
   )
+
+  // CA-24: check-offs saved from the panel, so the grid's copy stays current without a
+  // reload. An entry only applies while the to-do text it was saved for is unchanged.
+  const [todoChecks, setTodoChecks] = useState<Record<string, { todo: string; done: number[] }>>({})
+  function withChecks(event: CalendarEvent): CalendarEvent {
+    const saved = todoChecks[event._id]
+    const todo = (event.isTask ? event.todoText : event.notes) ?? ''
+    return saved && saved.todo === todo ? { ...event, todoDone: saved.done } : event
+  }
 
   function handleEventSaved(result?: EventSaveResult) {
     setAttempt((n) => n + 1)
@@ -139,7 +149,7 @@ function WeekPage() {
         <WeekGrid
           weekStart={weekStart}
           now={now}
-          events={[...result.events, ...taskBlocks]}
+          events={[...result.events, ...taskBlocks].map(withChecks)}
           onSelectEvent={setSelected}
         />
         <TaskForm onTasksChange={setTasks} reloadToken={taskReload} extraNotices={taskNotices} />
@@ -147,6 +157,9 @@ function WeekPage() {
       <EventPanel
         event={selected}
         onClose={() => setSelected(null)}
+        onTodoSaved={(event, todo, done) =>
+          setTodoChecks((prev) => ({ ...prev, [event._id]: { todo, done } }))
+        }
         onEdit={(event) => {
           setSelected(null)
           setEditing(event)
