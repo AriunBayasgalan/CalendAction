@@ -187,7 +187,7 @@ export const placeTask = async (req, res) => {
                 const updated = await Task.findOneAndUpdate(
                     { _id: task._id, owner: ownerId, status: 'unscheduled' },
                     { $set: { start: result.start, end: result.end, status: 'scheduled' } },
-                    { new: true, runValidators: true }
+                    { returnDocument: "after", runValidators: true }
                 );
                 if (!updated) return res.status(409).json({ error: 'Task is already scheduled' });
 
@@ -232,7 +232,7 @@ export const skipTask = async (req, res) => {
                 const updated = await Task.findOneAndUpdate(
                     filter,
                     { $set: { start: result.start, end: result.end } },
-                    { new: true, runValidators: true }
+                    { returnDocument: "after", runValidators: true }
                 );
                 if (!updated) return res.status(409).json({ error: "Task changed, try again" });
 
@@ -247,7 +247,7 @@ export const skipTask = async (req, res) => {
             const updated = await Task.findOneAndUpdate(
                 filter,
                 { $set: { status: "unscheduled" }, $unset: { start: 1, end: 1 } }, // removes start and end from the document
-                { new: true, runValidators: true }
+                { returnDocument: "after", runValidators: true }
             );
             if (!updated) return res.status(409).json({ error: "Task changed, try again" });
             return res.json(updated);

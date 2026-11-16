@@ -132,7 +132,7 @@ export async function updateEvent(req, res) {
     const updated = await Event.findOneAndUpdate(
       { _id: existing._id, owner: req.user.id }, 
       { $set: parsed.data },
-      { new: true, runValidators: true }  
+      { returnDocument: "after", runValidators: true }
       // returns updated object and validates schema model -- does not run the pre validate hooks
     );
     if (!updated) return notFound(res);
