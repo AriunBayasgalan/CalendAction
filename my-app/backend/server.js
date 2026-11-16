@@ -67,7 +67,8 @@ async function connectMongo() {
   try {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
     await mongoose.connection.db.admin().ping();
-    console.log("MongoDB ping succeeded. Connected to Atlas.");
+    // Only the database name: the URI can contain credentials, so it is never logged
+    console.log(`Connected to MongoDB (db: ${mongoose.connection.name})`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`MongoDB connection failed: ${message}`);
