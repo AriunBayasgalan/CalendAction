@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   defaultTimeZone,
   endOfDayInTimeZone,
@@ -24,7 +25,8 @@ test('defaultTimeZone is America/New_York unless DEFAULT_TIMEZONE is a valid zon
     spawnSync(
       process.execPath,
       ['-e', "import { defaultTimeZone } from './services/timeZone.js'; process.stdout.write(defaultTimeZone());"],
-      { cwd: new URL('..', import.meta.url).pathname, encoding: 'utf8', env: { ...process.env, ...env } },
+      // fileURLToPath, not .pathname: on Windows .pathname is "/C:/..." which isn't a valid cwd
+      { cwd: fileURLToPath(new URL('..', import.meta.url)), encoding: 'utf8', env: { ...process.env, ...env } },
     );
 
   const unset = run({ DEFAULT_TIMEZONE: '' });

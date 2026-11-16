@@ -169,6 +169,7 @@ export const placeTask = async(req, res) => {
         return res.json(updated);
 
     } catch (error) {
+        console.error('placeTask', error);
         return res.status(500).json({error: "Server error"});
     }
 
@@ -202,6 +203,7 @@ export const skipTask = async(req, res) => {
 
     }
     catch (error) {
+        console.error('skipTask', error);
         return res.status(500).json({error: "Server error"});
     }
 }

@@ -53,6 +53,15 @@ const dueFormat = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
 })
 
+// "Tue, Nov 10, 2:00 PM"
+const placedFormat = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
 // 90 -> "1 h 30 min"
 function formatDuration(minutes: number) {
   const hours = Math.floor(minutes / 60)
