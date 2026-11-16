@@ -109,6 +109,7 @@ test('when no later hole exists, skip unschedules the task and clears start/end'
 test('invalid id returns 400', async () => {
     const res = await skip('not-an-id');
     assert.equal(res.status, 400);
+    assert.deepEqual(res.json, { error: 'Invalid id' });
 });
 
 test('unscheduled task returns 400', async () => {

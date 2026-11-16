@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import { z } from 'zod';
 import Task from '../models/Task.js';
 import { findNextHole } from '../services/findNextHole.js';
@@ -8,6 +7,7 @@ import Event from '../models/Event.js';
 import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
 import { withOwnerLock } from '../services/ownerLock.js';
 import { sendValidationError } from '../services/apiErrors.js';
+import { hasValidId } from '../middleware/requireValidId.js';
 
 // How many slots place/skip try when a write turns out to overlap something
 // another request wrote at the same moment.
@@ -67,7 +67,6 @@ const readTimeZone = (req, res) => {
 
 // 2) 내 task 하나 찾기 (owner까지 같이 조건에 넣는 게 핵심)
 const findMyTask = (req) => {
-    if (!mongoose.isValidObjectId(req.params.id)) return null;
     return Task.findOne({ _id: req.params.id, owner: req.user.id });
 };
 
@@ -168,7 +167,7 @@ async function overlapsOtherBlock(ownerId, taskId, start, end) {
 }
 
 export const placeTask = async (req, res) => {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    if (!hasValidId(req, res)) return;
     const timeZone = readTimeZone(req, res);
     if (!timeZone) return;
     const ownerId = req.user.id;
@@ -211,7 +210,7 @@ export const placeTask = async (req, res) => {
 }
 
 export const skipTask = async (req, res) => {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    if (!hasValidId(req, res)) return;
     const timeZone = readTimeZone(req, res);
     if (!timeZone) return;
     const ownerId = req.user.id;

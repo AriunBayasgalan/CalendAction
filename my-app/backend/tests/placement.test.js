@@ -32,6 +32,7 @@ const mk = (extra = {}) => Task.create({ owner, title: 't', durationMinutes: 30,
 test('invalid id returns 400', async () => {
   const res = await call('not-an-id');
   assert.equal(res.statusCode, 400);
+  assert.deepEqual(res.body, { error: 'Invalid id' });
 });
 
 test('unknown task returns 404', async () => {

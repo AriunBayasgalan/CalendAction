@@ -6,6 +6,7 @@ import {
   updateRule,
   deleteRule,
 } from "../controllers/rule.controller.js";
+import requireValidId from "../middleware/requireValidId.js";
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.use(requireAuth);
 
 router.get("/", getRules);
 router.post("/", createRule);
-router.put("/:id", updateRule);
-router.delete("/:id", deleteRule);
+router.put("/:id", requireValidId, updateRule);
+router.delete("/:id", requireValidId, deleteRule);
 
 export default router;

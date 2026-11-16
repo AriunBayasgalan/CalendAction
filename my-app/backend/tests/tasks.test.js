@@ -105,8 +105,18 @@ describe('task ownership', () => {
 });
 
 describe('task validation', () => {
-    test('rejects a malformed task id with 404', async () => {
-        assert.equal((await call('GET', '/tasks/not-an-id', { user: userA })).status, 404);
+    test('rejects a malformed task id with 400 Invalid id', async () => {
+        for (const [method, path] of [
+            ['GET', '/tasks/not-an-id'],
+            ['PATCH', '/tasks/not-an-id'],
+            ['DELETE', '/tasks/not-an-id'],
+            ['POST', '/tasks/not-an-id/place'],
+            ['POST', '/tasks/not-an-id/skip'],
+        ]) {
+            const res = await call(method, path, { user: userA, body: { title: 'x' } });
+            assert.equal(res.status, 400, `${method} ${path}`);
+            assert.deepEqual(res.json, { error: 'Invalid id' });
+        }
     });
 
     test('dueDate accepts ISO date strings and null means no deadline', async () => {
