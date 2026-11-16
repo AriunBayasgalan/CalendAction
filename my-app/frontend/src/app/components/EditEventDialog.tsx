@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
-import { readApiErrors, toIsoDateTime, type ApiErrors, type CalendarEvent } from './events.ts'
+import {
+  readApiErrors,
+  toIsoDateTime,
+  type ApiErrors,
+  type CalendarEvent,
+  type EventSaveResult,
+} from './events.ts'
 import { toIsoDate } from './week.ts'
 import Field from './ui/Field.tsx'
 // Same look as the "Add class" dialog
@@ -11,7 +17,8 @@ type EditEventDialogProps = {
   event: CalendarEvent | null
   onClose: () => void
   // Called after a save or delete so the page can reload the grid.
-  onChanged: () => void
+  // A save that moved or unscheduled tasks passes the response body.
+  onChanged: (result?: EventSaveResult) => void
 }
 
 const NO_ERRORS: ApiErrors = { form: [], fields: {} }
@@ -57,13 +64,14 @@ function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
         logout()
         return
       }
+      const result: unknown =
+        response.status === 204 ? null : await response.json().catch(() => null)
       if (!response.ok) {
-        const result: unknown = await response.json().catch(() => null)
         setErrors(readApiErrors(result, response.status))
         return
       }
 
-      onChanged()
+      onChanged(response.status === 204 ? undefined : (result as EventSaveResult))
       close()
     } catch {
       setErrors({

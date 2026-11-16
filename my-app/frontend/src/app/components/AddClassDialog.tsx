@@ -4,7 +4,7 @@ import {
   readApiErrors,
   toIsoDateTime,
   type ApiErrors,
-  type CalendarEvent,
+  type EventSaveResult,
   type NewEvent,
 } from './events.ts'
 import { toIsoDate } from './week.ts'
@@ -14,8 +14,8 @@ import styles from './AddClassDialog.module.css'
 type AddClassDialogProps = {
   // Date the form starts on, e.g. today or the first day of the week being viewed.
   defaultDate: Date
-  // Called with the saved event so the page can refresh what the grid shows.
-  onCreated?: (event: CalendarEvent) => void
+  // Called with the saved event (and any tasks moved or unscheduled to make room).
+  onCreated?: (event: EventSaveResult) => void
 }
 
 const NO_ERRORS: ApiErrors = { form: [], fields: {} }
@@ -89,7 +89,7 @@ function AddClassDialog({ defaultDate, onCreated }: AddClassDialogProps) {
         return
       }
 
-      const created = result as CalendarEvent
+      const created = result as EventSaveResult
       setStatus(`Added “${created.title}”.`)
       onCreated?.(created)
       close()

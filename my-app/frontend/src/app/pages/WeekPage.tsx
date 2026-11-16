@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import AddClassDialog from '../components/AddClassDialog.tsx'
 import EditEventDialog from '../components/EditEventDialog.tsx'
-import TaskForm, { type Task } from '../components/TaskForm.tsx'
-import type { CalendarEvent } from '../components/events.ts'
+import TaskForm, { type Task, type TaskNotice } from '../components/TaskForm.tsx'
+import type { CalendarEvent, EventSaveResult } from '../components/events.ts'
+import { placedFormat } from '../components/tasks.ts'
 import WeekGrid from '../components/WeekGrid.tsx'
 import WeekHeader from '../components/WeekHeader.tsx'
 import { useNow } from '../components/useNow.ts'
@@ -29,11 +30,33 @@ function WeekPage() {
   const [editing, setEditing] = useState<CalendarEvent | null>(null)
   // Kept in sync by TaskForm, so placed tasks show on the grid right away
   const [tasks, setTasks] = useState<Task[]>([])
+  const [taskReload, setTaskReload] = useState(0)
+  const [taskNotices, setTaskNotices] = useState<TaskNotice[]>([])
   const taskBlocks: CalendarEvent[] = tasks.flatMap((task) =>
     task.status === 'scheduled' && task.start && task.end
       ? [{ _id: task._id, title: task.title, start: task.start, end: task.end, isTask: true }]
       : [],
   )
+
+  function handleEventSaved(result?: EventSaveResult) {
+    setAttempt((n) => n + 1)
+    setTaskReload((n) => n + 1)
+    if (!result) {
+      setTaskNotices([])
+      return
+    }
+    const classTitle = result.title
+    const notices: TaskNotice[] = [
+      ...(result.moved ?? []).map((task) => ({
+        text: `“${task.title}” moved to ${placedFormat.format(new Date(task.start!))} to make room for “${classTitle}”`,
+      })),
+      ...(result.unscheduled ?? []).map((task) => ({
+        text: `“${task.title}” unscheduled because “${classTitle}” now uses its time`,
+        alert: true,
+      })),
+    ]
+    setTaskNotices(notices)
+  }
 
   // Fetch only the selected week and refetch when it changes. The cleanup aborts the
   // previous request, so a slow response for an old week can't overwrite the current one.
@@ -83,7 +106,7 @@ function WeekPage() {
         actions={
           <AddClassDialog
             defaultDate={isCurrentWeek ? now : weekStart}
-            onCreated={() => setAttempt((n) => n + 1)}
+            onCreated={handleEventSaved}
           />
         }
       />
@@ -107,12 +130,12 @@ function WeekPage() {
           events={[...result.events, ...taskBlocks]}
           onSelectEvent={setEditing}
         />
-        <TaskForm onTasksChange={setTasks} />
+        <TaskForm onTasksChange={setTasks} reloadToken={taskReload} extraNotices={taskNotices} />
       </div>
       <EditEventDialog
         event={editing}
         onClose={() => setEditing(null)}
-        onChanged={() => setAttempt((n) => n + 1)}
+        onChanged={handleEventSaved}
       />
     </div>
   )

@@ -1,7 +1,16 @@
 import { z } from 'zod';
 import Event from '../models/Event.js';
 import { sendValidationError } from '../services/apiErrors.js';
+import { fetchEvents } from '../services/eventQuery.js';
+import { withOwnerLock } from '../services/ownerLock.js';
+import { defaultTimeZone, resolveTimeZone } from '../services/timeZone.js';
+import {
+  evictOverlappingTasks,
+  findOverlappingEvent,
+  overlapError,
+} from '../services/placement.js';
 
+export { fetchEvents };
 
 const dateValue = z
   .union([z.iso.datetime({ offset: true, local: true }), z.iso.date()], {
@@ -52,35 +61,43 @@ const serverError = (res, err) => {
 
 const validationError = (res, zodError) => sendValidationError(res, zodError, 'Validation failed');
 
+const timeZoneOf = (req) => {
+  const resolved = resolveTimeZone(req);
+  return resolved.timeZone ?? defaultTimeZone();
+};
+
+function eventPayload(event, placements) {
+  return {
+    ...event.toJSON(),
+    moved: placements.moved,
+    unscheduled: placements.unscheduled,
+  };
+}
+
 
 
 export async function createEvent(req, res) {
   const parsed = createEventSchema.safeParse(req.body);
   if (!parsed.success) return validationError(res, parsed.error);
 
+  const ownerId = req.user.id;
+  const timeZone = timeZoneOf(req);
+  const { start, end } = parsed.data;
+
   try {
-    const event = await Event.create({ ...parsed.data, owner: req.user.id });
-    res.status(201).json(event);
+    return await withOwnerLock(ownerId, async () => {
+      const clash = await findOverlappingEvent(ownerId, start, end);
+      if (clash) {
+        return res.status(409).json({ error: overlapError(clash, timeZone) });
+      }
+
+      const event = await Event.create({ ...parsed.data, owner: ownerId });
+      const placements = await evictOverlappingTasks(ownerId, event, timeZone);
+      res.status(201).json(eventPayload(event, placements));
+    });
   } catch (err) {
     serverError(res, err);
   }
-}
-
-
-export async function fetchEvents(ownerId, { from, to } = {}) {
-  const conditions = [{ owner: ownerId }];
-
-  if (to) conditions.push({ start: { $lt: to } });
-  if (from) {
-    conditions.push({
-      $or: [
-        { end: { $gt: from } },
-        { start: { $gte: from } },
-      ],
-    });
-  }
-
-  return Event.find({ $and: conditions }).sort({ start: 1 });
 }
 
 export async function listEvents(req, res) {
@@ -110,11 +127,13 @@ export async function updateEvent(req, res) {
   const parsed = updateEventSchema.safeParse(req.body);
   if (!parsed.success) return validationError(res, parsed.error);
 
+  const ownerId = req.user.id;
+  const timeZone = timeZoneOf(req);
+
   try {
-    const existing = await Event.findOne({ _id: req.params.id, owner: req.user.id });
+    const existing = await Event.findOne({ _id: req.params.id, owner: ownerId });
     if (!existing) return notFound(res);
 
-   
     const start = parsed.data.start ?? existing.start;
     const end = parsed.data.end ?? existing.end;
     if (end < start) {
@@ -124,14 +143,36 @@ export async function updateEvent(req, res) {
       });
     }
 
-    const updated = await Event.findOneAndUpdate(
-      { _id: existing._id, owner: req.user.id }, 
-      { $set: parsed.data },
-      { returnDocument: "after", runValidators: true }
-      // returns updated object and validates schema model -- does not run the pre validate hooks
-    );
-    if (!updated) return notFound(res);
-    res.json(updated);
+    const timeChanged =
+      (parsed.data.start !== undefined && +parsed.data.start !== +existing.start) ||
+      (parsed.data.end !== undefined && +parsed.data.end !== +existing.end);
+
+    if (!timeChanged) {
+      const updated = await Event.findOneAndUpdate(
+        { _id: existing._id, owner: ownerId },
+        { $set: parsed.data },
+        { returnDocument: "after", runValidators: true }
+      );
+      if (!updated) return notFound(res);
+      return res.json(eventPayload(updated, { moved: [], unscheduled: [] }));
+    }
+
+    return await withOwnerLock(ownerId, async () => {
+      const clash = await findOverlappingEvent(ownerId, start, end, existing._id);
+      if (clash) {
+        return res.status(409).json({ error: overlapError(clash, timeZone) });
+      }
+
+      const updated = await Event.findOneAndUpdate(
+        { _id: existing._id, owner: ownerId },
+        { $set: parsed.data },
+        { returnDocument: "after", runValidators: true }
+        // returns updated object and validates schema model -- does not run the pre validate hooks
+      );
+      if (!updated) return notFound(res);
+      const placements = await evictOverlappingTasks(ownerId, updated, timeZone);
+      res.json(eventPayload(updated, placements));
+    });
   } catch (err) {
     serverError(res, err);
   }
@@ -146,4 +187,3 @@ export async function deleteEvent(req, res) {
     serverError(res, err);
   }
 }
-

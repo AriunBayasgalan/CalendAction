@@ -35,12 +35,21 @@ function formatDuration(minutes: number) {
   return [hours && `${hours} h`, rest && `${rest} min`].filter(Boolean).join(' ')
 }
 
+export type TaskNotice = {
+  text: string
+  alert?: boolean
+}
+
 type TaskFormProps = {
   // Gets the full task list whenever it changes, so the page can draw placed tasks on the grid.
   onTasksChange: (tasks: Task[]) => void
+  // Bumped when an event is saved so this list reloads (a class may have moved tasks).
+  reloadToken?: number
+  // Notes from saving a class, e.g. a task that was moved or unscheduled to make room.
+  extraNotices?: TaskNotice[]
 }
 
-function TaskForm({ onTasksChange }: TaskFormProps) {
+function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProps) {
   const { apiFetch, logout } = useAuth()
   const [tasks, setTasks] = useState<Task[]>([])
   const [title, setTitle] = useState('')
@@ -58,8 +67,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
   // Why the last Place failed (e.g. no open time), shown on that task's card
   const [placeError, setPlaceError] = useState<{ id: string; message: string } | null>(null)
   // Where the last placed task went, since it may land in a week that isn't on screen
-  const [placedMessage, setPlacedMessage] = useState('')
-  const [placedIsAlert, setPlacedIsAlert] = useState(false)
+  const [notices, setNotices] = useState<TaskNotice[]>([])
   const [skippingIds, setSkippingIds] = useState<string[]>([])
   // Why the last Skip failed, shown on that task's card
   const [skipError, setSkipError] = useState<{ id: string; message: string } | null>(null)
@@ -67,6 +75,12 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
   useEffect(() => {
     onTasksChange(tasks)
   }, [tasks, onTasksChange])
+
+  const [noticesToken, setNoticesToken] = useState(reloadToken)
+  if (reloadToken !== noticesToken) {
+    setNoticesToken(reloadToken)
+    setNotices(extraNotices ?? [])
+  }
 
   useEffect(() => {
     apiFetch('/tasks')
@@ -86,7 +100,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
         setError('Could not load tasks.')
         setLoadState('failed')
       })
-  }, [apiFetch, logout])
+  }, [apiFetch, logout, reloadToken])
 
   function startEdit(task: Task) {
     setError('')
@@ -110,8 +124,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
     if (!window.confirm('Delete this task?')) return
 
     setError('')
-    setPlacedMessage('')
-    setPlacedIsAlert(false)
+    setNotices([])
     setDeletingIds((prev) => [...prev, id])
 
     try {
@@ -142,8 +155,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
     if (placingIds.includes(id)) return
 
     setPlaceError(null)
-    setPlacedMessage('')
-    setPlacedIsAlert(false)
+    setNotices([])
     setPlacingIds((prev) => [...prev, id])
 
     try {
@@ -164,8 +176,9 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
       setTasks((prev) => prev.map((task) => (task._id === placed._id ? placed : task)))
       if (editingId === id) resetForm()
       if (placed.start) {
-        setPlacedIsAlert(false)
-        setPlacedMessage(`Placed “${placed.title}” on ${placedFormat.format(new Date(placed.start))}.`)
+        setNotices([
+          { text: `Placed “${placed.title}” on ${placedFormat.format(new Date(placed.start))}.` },
+        ])
       }
     } catch {
       setPlaceError({ id, message: 'Could not place task.' })
@@ -180,8 +193,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
     if (skippingIds.includes(id)) return
 
     setSkipError(null)
-    setPlacedMessage('')
-    setPlacedIsAlert(false)
+    setNotices([])
     setSkippingIds((prev) => [...prev, id])
 
     try {
@@ -199,8 +211,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
 
       const skipped: Task = await res.json()
       setTasks((prev) => prev.map((task) => (task._id === skipped._id ? skipped : task)))
-      setPlacedIsAlert(false)
-      setPlacedMessage(skipMessage(skipped))
+      setNotices([{ text: skipMessage(skipped) }])
     } catch {
       setSkipError({ id, message: 'Could not skip task.' })
     } finally {
@@ -253,23 +264,27 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
           : [data.task, ...prev],
       )
       if (wasScheduled && data.moved && data.task.status === 'scheduled' && data.task.start) {
-        setPlacedIsAlert(false)
-        setPlacedMessage(
-          `“${data.task.title}” moved to ${placedFormat.format(new Date(data.task.start))} to fit the new due date`,
-        )
+        setNotices([
+          {
+            text: `“${data.task.title}” moved to ${placedFormat.format(new Date(data.task.start))} to fit the new due date`,
+          },
+        ])
       } else if (wasScheduled && data.task.status === 'unscheduled') {
         const dueNow = data.task.dueDate ? new Date(data.task.dueDate) : null
         const slotEnd = previous.end ? new Date(previous.end) : null
         if (dueNow && slotEnd && dueNow < slotEnd) {
-          setPlacedIsAlert(true)
-          setPlacedMessage(
-            `“${data.task.title}”: unscheduled event due to being after the new due date`,
-          )
+          setNotices([
+            {
+              text: `“${data.task.title}”: unscheduled event due to being after the new due date`,
+              alert: true,
+            },
+          ])
         } else {
-          setPlacedIsAlert(false)
-          setPlacedMessage(
-            `“${data.task.title}” is back in Needs a slot because its duration changed.`,
-          )
+          setNotices([
+            {
+              text: `“${data.task.title}” is back in Needs a slot because its duration changed.`,
+            },
+          ])
         }
       }
       resetForm()
@@ -335,14 +350,15 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
       </div>
 
       <h2>Needs a slot</h2>
-      {placedMessage && (
+      {notices.map((notice) => (
         <p
-          role={placedIsAlert ? 'alert' : 'status'}
-          className={placedIsAlert ? styles.error : styles.placed}
+          key={notice.text}
+          role={notice.alert ? 'alert' : 'status'}
+          className={notice.alert ? styles.error : styles.placed}
         >
-          {placedMessage}
+          {notice.text}
         </p>
-      )}
+      ))}
       {loadState === 'loading' ? (
         <p className={styles.empty}>Loading tasks…</p>
       ) : loadState === 'failed' ? (
