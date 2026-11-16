@@ -1,23 +1,22 @@
 .scroller {
-  /* Rows stretch to fill the window; below this height the page scrolls instead. */
-  --min-hour-height: 28px;
+  /* The grid draws all 24 hours, so it scrolls inside a window-sized box and
+     opens at 7 AM (see WeekGrid.tsx). */
+  --hour-height: 40px;
   --gutter-width: 64px;
 
   flex: 1;
   /* Lets the grid shrink and scroll sideways when it shares a row with the task panel. */
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-x: auto;
-  /* Room for the "10 PM" label, which hangs below the last line. */
-  padding-bottom: 12px;
+  /* Fill the window below the header and week controls, but never collapse. */
+  height: max(420px, calc(100svh - 190px));
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .grid {
   display: grid;
   grid-template-columns: var(--gutter-width) repeat(7, minmax(96px, 1fr));
-  grid-template-rows: auto 1fr;
-  flex: 1;
+  grid-template-rows: auto calc(var(--hour-count) * var(--hour-height));
   min-width: calc(var(--gutter-width) + 7 * 96px);
 }
 
@@ -29,7 +28,20 @@
   background: var(--bg);
 }
 
+/* Day headers stay visible while scrolling through the hours */
+.corner,
 .dayHeader {
+  position: sticky;
+  top: 0;
+}
+
+.corner {
+  z-index: 4;
+}
+
+.dayHeader {
+  z-index: 3;
+  background: var(--bg);
   padding: 12px 4px 14px;
   text-align: center;
   border-left: 1px solid var(--grid-line);
@@ -46,6 +58,8 @@
 
 .dayHeader.today {
   color: var(--accent);
+  /* Opaque, so hours scrolling under the sticky header don't show through */
+  background: linear-gradient(var(--accent-bg), var(--accent-bg)), var(--bg);
 
   .weekday,
   .date {
@@ -54,7 +68,7 @@
 }
 
 .gutter {
-  min-height: calc(var(--hour-count) * var(--min-hour-height));
+  height: calc(var(--hour-count) * var(--hour-height));
 }
 
 .hourLabel {
@@ -81,7 +95,7 @@
 
 .hourCell {
   flex: 1;
-  min-height: var(--min-hour-height);
+  height: var(--hour-height);
   box-sizing: border-box;
 
   & + & {

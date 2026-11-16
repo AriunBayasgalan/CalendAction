@@ -1,15 +1,16 @@
 // Week helpers. Everything works in the browser's local timezone.
 
-// Visible grid hours. Mirrored by backend/services/dayWindow.js as the default
-// placement window when the user has no rules. A rule may allow times outside
-// this range; those blocks are not drawn on the grid yet.
-export const DAY_START_HOUR = 7
-export const DAY_END_HOUR = 22
+// The grid draws the whole day, so a block placed at any hour (e.g. 3 AM via a
+// rule) is visible. It opens scrolled to SCROLL_TO_HOUR, which matches the
+// backend's default placement window start (backend/services/dayWindow.js).
+export const GRID_START_HOUR = 0
+export const GRID_END_HOUR = 24
+export const SCROLL_TO_HOUR = 7
 
-// Hours that start a row: 7, 8, ... 21. DAY_END_HOUR is only the bottom line.
+// Hours that start a row: 0, 1, ... 23. GRID_END_HOUR is only the bottom line.
 export const HOURS = Array.from(
-  { length: DAY_END_HOUR - DAY_START_HOUR },
-  (_, i) => DAY_START_HOUR + i,
+  { length: GRID_END_HOUR - GRID_START_HOUR },
+  (_, i) => GRID_START_HOUR + i,
 )
 
 // Day arithmetic uses setDate (not milliseconds) so DST changes don't shift days.
@@ -72,7 +73,7 @@ export function formatFullDate(date: Date) {
   return fullDateFormat.format(date)
 }
 
-// "7 AM" ... "10 PM"
+// "12 AM", "7 AM" ... "10 PM"
 export function formatHour(hour: number) {
   return hourFormat.format(new Date(2000, 0, 1, hour))
 }
