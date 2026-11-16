@@ -133,6 +133,17 @@ describe('rule ownership', () => {
 });
 
 describe('rule validation', () => {
+  test('rejects a malformed rule id with 400 Invalid id', async () => {
+    for (const [method, path] of [
+      ['PUT', '/rules/not-an-id'],
+      ['DELETE', '/rules/not-an-id'],
+    ]) {
+      const res = await call(method, path, { user: userA, body: validRule });
+      assert.equal(res.status, 400, `${method} ${path}`);
+      assert.deepEqual(res.json, { error: 'Invalid id' });
+    }
+  });
+
   test('Zod rejects bad rules with { error, details: [{ field, message }] }', async () => {
     const res = await call('POST', '/rules', { user: userA, body: { notBefore: '17:00', notAfter: '09:00' } });
     assert.equal(res.status, 400);

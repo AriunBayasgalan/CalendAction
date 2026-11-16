@@ -1,5 +1,4 @@
 import { z } from "zod";
-import mongoose from "mongoose";
 import Rule from "../models/rule.model.js";
 import { sendValidationError } from "../services/apiErrors.js";
 
@@ -40,10 +39,6 @@ export async function getRules(req, res) {
 export async function updateRule(req, res) {
   const { id } = req.params;
 
-  if (!mongoose.isValidObjectId(id)) {
-    return res.status(400).json({ error: "Invalid rule id" });
-  }
-
   const result = ruleSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -68,10 +63,6 @@ export async function updateRule(req, res) {
 // Delete a rule
 export async function deleteRule(req, res) {
   const { id } = req.params;
-
-  if (!mongoose.isValidObjectId(id)) {
-    return res.status(400).json({ error: "Invalid rule id" });
-  }
 
   const rule = await Rule.findOneAndDelete({ _id: id, owner: req.user.id });
 

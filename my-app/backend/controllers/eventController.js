@@ -1,4 +1,3 @@
-import { isValidObjectId } from 'mongoose';
 import { z } from 'zod';
 import Event from '../models/Event.js';
 import { sendValidationError } from '../services/apiErrors.js';
@@ -98,8 +97,6 @@ export async function listEvents(req, res) {
 
 
 export async function getEvent(req, res) {
-  if (!isValidObjectId(req.params.id)) return notFound(res);
-
   try {
     const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
     if (!event) return notFound(res);
@@ -110,8 +107,6 @@ export async function getEvent(req, res) {
 }
 
 export async function updateEvent(req, res) {
-  if (!isValidObjectId(req.params.id)) return notFound(res);
-
   const parsed = updateEventSchema.safeParse(req.body);
   if (!parsed.success) return validationError(res, parsed.error);
 
@@ -143,8 +138,6 @@ export async function updateEvent(req, res) {
 }
 
 export async function deleteEvent(req, res) {
-  if (!isValidObjectId(req.params.id)) return notFound(res);
-
   try {
     const result = await Event.deleteOne({ _id: req.params.id, owner: req.user.id });
     if (result.deletedCount === 0) return notFound(res);

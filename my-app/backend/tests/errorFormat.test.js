@@ -227,3 +227,46 @@ describe('non-validation errors are JSON too', () => {
         assert.ok(logged.some((args) => args.some((a) => a instanceof Error && a.message === 'secret internals')));
     });
 });
+
+describe('malformed ids are 400 Invalid id', () => {
+    const routes = [
+        ['GET', '/events/not-an-id'],
+        ['PATCH', '/events/not-an-id'],
+        ['DELETE', '/events/not-an-id'],
+        ['GET', '/tasks/not-an-id'],
+        ['PATCH', '/tasks/not-an-id'],
+        ['DELETE', '/tasks/not-an-id'],
+        ['POST', '/tasks/not-an-id/place'],
+        ['POST', '/tasks/not-an-id/skip'],
+        ['PUT', '/rules/not-an-id'],
+        ['DELETE', '/rules/not-an-id'],
+    ];
+
+    test('every :id route rejects a malformed id the same way', async () => {
+        for (const [method, path] of routes) {
+            const res = await call(method, path);
+            assertErrorShape(res, 400);
+            assert.deepEqual(res.json, { error: 'Invalid id' });
+        }
+    });
+
+    test('a well-formed id that is not found stays 404', async () => {
+        const id = new mongoose.Types.ObjectId();
+        const cases = [
+            ['GET', `/events/${id}`],
+            ['PATCH', `/events/${id}`, { title: 'x' }],
+            ['DELETE', `/events/${id}`],
+            ['GET', `/tasks/${id}`],
+            ['PATCH', `/tasks/${id}`, { title: 'x' }],
+            ['DELETE', `/tasks/${id}`],
+            ['POST', `/tasks/${id}/place`],
+            ['POST', `/tasks/${id}/skip`],
+            ['PUT', `/rules/${id}`, { notBefore: '09:00', notAfter: '17:00' }],
+            ['DELETE', `/rules/${id}`],
+        ];
+        for (const [method, path, body] of cases) {
+            const res = await call(method, path, { body });
+            assertErrorShape(res, 404);
+        }
+    });
+});

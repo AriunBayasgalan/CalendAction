@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import { z } from 'zod';
 import Task from '../models/Task.js';
 import { findNextHole } from '../services/findNextHole.js';
@@ -8,6 +7,7 @@ import Event from '../models/Event.js';
 import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
 import { withOwnerLock } from '../services/ownerLock.js';
 import { sendValidationError } from '../services/apiErrors.js';
+import { hasValidId } from '../middleware/requireValidId.js';
 
 // How many slots place/skip try when a write turns out to overlap something
 // another request wrote at the same moment.
@@ -67,7 +67,6 @@ const readTimeZone = (req, res) => {
 
 // 2) 내 task 하나 찾기 (owner까지 같이 조건에 넣는 게 핵심)
 const findMyTask = (req) => {
-    if (!mongoose.isValidObjectId(req.params.id)) return null;
     return Task.findOne({ _id: req.params.id, owner: req.user.id });
 };
 
@@ -110,9 +109,59 @@ export const updateTask = async (req, res) => {
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     const { dueDate, ...rest } = parsed.data;
+    const durationChanged =
+        task.status === 'scheduled' &&
+        rest.durationMinutes !== undefined &&
+        rest.durationMinutes !== task.durationMinutes;
+    // A new due date before the slot's end would leave the task scheduled after
+    // its deadline. (Clearing the due date, or a later due date, keeps the slot.)
+    const dueDateBeforeSlot =
+        task.status === 'scheduled' &&
+        dueDate &&
+        task.end &&
+        dueDate < task.end;
     Object.assign(task, rest);
     // dueDate: null clears the deadline, a date sets it, undefined leaves it alone
     if (dueDate !== undefined) task.dueDate = dueDate ?? undefined;
+
+    // A duration change always unschedules; the Task model clears start/end.
+    if (durationChanged) {
+        task.status = 'unscheduled';
+        await task.save();
+        return res.json({ task });
+    }
+
+    // Due date now before the slot: try to re-place, and only unschedule if
+    // no earlier hole fits. findSlotForTask ignores this task's own old slot.
+    if (dueDateBeforeSlot) {
+        const ownerId = req.user.id;
+        try {
+            return await withOwnerLock(ownerId, async () => {
+                for (let attempt = 0; attempt < MAX_SLOT_ATTEMPTS; attempt++) {
+                    const result = await findSlotForTask(task, timeZone, ownerId);
+                    if (!result.found) break;
+
+                    task.start = result.start;
+                    task.end = result.end;
+                    task.status = 'scheduled';
+                    await task.save();
+
+                    if (!(await overlapsOtherBlock(ownerId, task._id, result.start, result.end))) {
+                        return res.json({ task, moved: true });
+                    }
+                    // Another write took this slot at the same moment: try the next one.
+                }
+
+                task.status = 'unscheduled';
+                await task.save();
+                return res.json({ task });
+            });
+        } catch (error) {
+            console.error('updateTask', error);
+            return res.status(500).json({ error: 'Server error' });
+        }
+    }
+
     await task.save();
     return res.json({ task });
 };
@@ -168,7 +217,7 @@ async function overlapsOtherBlock(ownerId, taskId, start, end) {
 }
 
 export const placeTask = async (req, res) => {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    if (!hasValidId(req, res)) return;
     const timeZone = readTimeZone(req, res);
     if (!timeZone) return;
     const ownerId = req.user.id;
@@ -211,7 +260,7 @@ export const placeTask = async (req, res) => {
 }
 
 export const skipTask = async (req, res) => {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    if (!hasValidId(req, res)) return;
     const timeZone = readTimeZone(req, res);
     if (!timeZone) return;
     const ownerId = req.user.id;

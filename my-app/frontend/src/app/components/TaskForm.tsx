@@ -59,6 +59,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
   const [placeError, setPlaceError] = useState<{ id: string; message: string } | null>(null)
   // Where the last placed task went, since it may land in a week that isn't on screen
   const [placedMessage, setPlacedMessage] = useState('')
+  const [placedIsAlert, setPlacedIsAlert] = useState(false)
   const [skippingIds, setSkippingIds] = useState<string[]>([])
   // Why the last Skip failed, shown on that task's card
   const [skipError, setSkipError] = useState<{ id: string; message: string } | null>(null)
@@ -109,6 +110,8 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
     if (!window.confirm('Delete this task?')) return
 
     setError('')
+    setPlacedMessage('')
+    setPlacedIsAlert(false)
     setDeletingIds((prev) => [...prev, id])
 
     try {
@@ -140,6 +143,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
 
     setPlaceError(null)
     setPlacedMessage('')
+    setPlacedIsAlert(false)
     setPlacingIds((prev) => [...prev, id])
 
     try {
@@ -160,6 +164,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
       setTasks((prev) => prev.map((task) => (task._id === placed._id ? placed : task)))
       if (editingId === id) resetForm()
       if (placed.start) {
+        setPlacedIsAlert(false)
         setPlacedMessage(`Placed “${placed.title}” on ${placedFormat.format(new Date(placed.start))}.`)
       }
     } catch {
@@ -176,6 +181,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
 
     setSkipError(null)
     setPlacedMessage('')
+    setPlacedIsAlert(false)
     setSkippingIds((prev) => [...prev, id])
 
     try {
@@ -193,6 +199,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
 
       const skipped: Task = await res.json()
       setTasks((prev) => prev.map((task) => (task._id === skipped._id ? skipped : task)))
+      setPlacedIsAlert(false)
       setPlacedMessage(skipMessage(skipped))
     } catch {
       setSkipError({ id, message: 'Could not skip task.' })
@@ -238,11 +245,33 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
       }
 
       const data = await res.json()
+      const previous = tasks.find((task) => task._id === data.task._id)
+      const wasScheduled = previous?.status === 'scheduled'
       setTasks((prev) =>
         editingId
           ? prev.map((task) => (task._id === data.task._id ? data.task : task))
           : [data.task, ...prev],
       )
+      if (wasScheduled && data.moved && data.task.status === 'scheduled' && data.task.start) {
+        setPlacedIsAlert(false)
+        setPlacedMessage(
+          `“${data.task.title}” moved to ${placedFormat.format(new Date(data.task.start))} to fit the new due date`,
+        )
+      } else if (wasScheduled && data.task.status === 'unscheduled') {
+        const dueNow = data.task.dueDate ? new Date(data.task.dueDate) : null
+        const slotEnd = previous.end ? new Date(previous.end) : null
+        if (dueNow && slotEnd && dueNow < slotEnd) {
+          setPlacedIsAlert(true)
+          setPlacedMessage(
+            `“${data.task.title}”: unscheduled event due to being after the new due date`,
+          )
+        } else {
+          setPlacedIsAlert(false)
+          setPlacedMessage(
+            `“${data.task.title}” is back in Needs a slot because its duration changed.`,
+          )
+        }
+      }
       resetForm()
     } catch {
       setError('Could not save task.')
@@ -307,7 +336,10 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
 
       <h2>Needs a slot</h2>
       {placedMessage && (
-        <p role="status" className={styles.placed}>
+        <p
+          role={placedIsAlert ? 'alert' : 'status'}
+          className={placedIsAlert ? styles.error : styles.placed}
+        >
           {placedMessage}
         </p>
       )}
@@ -380,6 +412,16 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
                     onClick={() => handleSkip(task._id)}
                   >
                     {skippingIds.includes(task._id) ? 'Skipping…' : 'Skip'}
+                  </button>
+                  <button type="button" onClick={() => startEdit(task)}>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deletingIds.includes(task._id)}
+                    onClick={() => handleDelete(task._id)}
+                  >
+                    {deletingIds.includes(task._id) ? 'Deleting…' : 'Delete'}
                   </button>
                 </div>
               </li>
