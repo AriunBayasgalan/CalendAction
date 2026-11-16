@@ -113,12 +113,18 @@ export const updateTask = async (req, res) => {
         task.status === 'scheduled' &&
         rest.durationMinutes !== undefined &&
         rest.durationMinutes !== task.durationMinutes;
+    // A new due date before the slot's end would leave the task scheduled after
+    // its deadline. (Clearing the due date, or a later due date, keeps the slot.)
+    const dueDateBeforeSlot =
+        task.status === 'scheduled' &&
+        dueDate &&
+        task.end &&
+        dueDate < task.end;
     Object.assign(task, rest);
     // dueDate: null clears the deadline, a date sets it, undefined leaves it alone
     if (dueDate !== undefined) task.dueDate = dueDate ?? undefined;
-    // A different duration may no longer fit this slot, so drop it back to unscheduled.
     // The Task model clears start/end when status is unscheduled.
-    if (durationChanged) task.status = 'unscheduled';
+    if (durationChanged || dueDateBeforeSlot) task.status = 'unscheduled';
     await task.save();
     return res.json({ task });
 };

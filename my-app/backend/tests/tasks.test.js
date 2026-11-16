@@ -344,5 +344,49 @@ describe('scheduled task updates', () => {
         assert.equal(saved.start, undefined);
         assert.equal(saved.end, undefined);
     });
+
+    test('a due date at or after the slot end keeps the scheduled slot', async () => {
+        const id = await scheduledTask();
+
+        const atEnd = await call('PATCH', `/tasks/${id}`, {
+            user: userA,
+            body: { dueDate: '2027-03-02T16:00:00.000Z' },
+        });
+        assert.equal(atEnd.status, 200, atEnd.text);
+        assert.equal(atEnd.json.task.status, 'scheduled');
+        assert.equal(atEnd.json.task.start, slot.start.toISOString());
+        assert.equal(atEnd.json.task.end, slot.end.toISOString());
+
+        const afterEnd = await call('PATCH', `/tasks/${id}`, {
+            user: userA,
+            body: { dueDate: '2027-03-02T16:00:01.000Z' },
+        });
+        assert.equal(afterEnd.status, 200, afterEnd.text);
+        assert.equal(afterEnd.json.task.status, 'scheduled');
+        assert.equal(afterEnd.json.task.end, slot.end.toISOString());
+
+        const cleared = await call('PATCH', `/tasks/${id}`, { user: userA, body: { dueDate: null } });
+        assert.equal(cleared.status, 200, cleared.text);
+        assert.equal(cleared.json.task.status, 'scheduled');
+        assert.equal(cleared.json.task.end, slot.end.toISOString());
+        assert.equal(cleared.json.task.dueDate, undefined);
+    });
+
+    test('a due date earlier than the slot end unschedules the task and clears start/end', async () => {
+        const id = await scheduledTask();
+        const res = await call('PATCH', `/tasks/${id}`, {
+            user: userA,
+            body: { dueDate: '2027-03-02T15:59:59.000Z' },
+        });
+        assert.equal(res.status, 200, res.text);
+        assert.equal(res.json.task.status, 'unscheduled');
+        assert.equal(res.json.task.start, undefined);
+        assert.equal(res.json.task.end, undefined);
+        assert.equal(new Date(res.json.task.dueDate).toISOString(), '2027-03-02T15:59:59.000Z');
+        const saved = await Task.findById(id).lean();
+        assert.equal(saved.status, 'unscheduled');
+        assert.equal(saved.start, undefined);
+        assert.equal(saved.end, undefined);
+    });
 });
 
