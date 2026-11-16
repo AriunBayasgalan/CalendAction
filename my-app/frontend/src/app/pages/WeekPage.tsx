@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/auth.ts'
 import AddClassDialog from '../components/AddClassDialog.tsx'
 import EditEventDialog from '../components/EditEventDialog.tsx'
 import EventPanel from '../components/EventPanel.tsx'
+import Mascot from '../components/Mascot.tsx'
 import TaskForm, { type Task, type TaskNotice } from '../components/TaskForm.tsx'
 import type { CalendarEvent, EventSaveResult } from '../components/events.ts'
 import { placedFormat } from '../components/tasks.ts'
@@ -154,6 +155,19 @@ function WeekPage() {
         />
         <TaskForm onTasksChange={setTasks} reloadToken={taskReload} extraNotices={taskNotices} />
       </div>
+      <Mascot
+        taskBlocks={taskBlocks}
+        onOpenBlock={(block) => {
+          // Jump to the block's week, then open it in the event panel (CA-23)
+          setWeekStart(startOfWeek(new Date(block.start)))
+          setSelected(withChecks(block))
+        }}
+        onAddTask={() => {
+          const input = document.querySelector<HTMLInputElement>('[data-task-title]')
+          input?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          input?.focus({ preventScroll: true })
+        }}
+      />
       <EventPanel
         event={selected}
         onClose={() => setSelected(null)}

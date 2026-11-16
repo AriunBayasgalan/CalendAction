@@ -308,6 +308,7 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
           Title
           <input
             value={title}
+            data-task-title
             maxLength={TITLE_MAX}
             onChange={(e) => setTitle(e.target.value)}
             required
