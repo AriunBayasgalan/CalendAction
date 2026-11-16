@@ -12,7 +12,7 @@ import {
     rePlaceOrUnschedule,
 } from '../services/placement.js';
 
-// 1) 입력 검증 규칙
+// Input validation
 // Unexpected fields are stripped (Zod's default): they are ignored, not rejected.
 // Text lengths are capped here and mirrored as maxlength in the Task model.
 const TITLE_MAX = 200;
@@ -42,13 +42,13 @@ const dueDateInput = (timeZone) =>
 const taskInput = (timeZone) =>
     z.object({
         title: z.string().trim().min(1).max(TITLE_MAX),
-        durationMinutes: z.number().int().positive(), // 0보다 커야 함
+        durationMinutes: z.number().int().positive(), // must be greater than 0
         dueDate: dueDateInput(timeZone).nullable().optional(),
         notes: z.string().max(TEXT_MAX).optional(),
-        todoText: z.string().max(TEXT_MAX).optional(), // trim 없음: 입력한 그대로 저장
+        todoText: z.string().max(TEXT_MAX).optional(), // not trimmed: stored as entered
     });
 
-// 수정할 때는 일부 필드만 보내도 되게 (but at least one known field is required)
+// Updates may send only some fields, but at least one known field is required
 const taskUpdate = (timeZone) =>
     taskInput(timeZone)
         .partial()
@@ -63,7 +63,7 @@ const readTimeZone = (req, res) => {
     return resolved.timeZone;
 };
 
-// 2) 내 task 하나 찾기 (owner까지 같이 조건에 넣는 게 핵심)
+// Find one of the signed-in user's tasks; the query always includes owner
 const findMyTask = (req) => {
     return Task.findOne({ _id: req.params.id, owner: req.user.id });
 };
@@ -82,13 +82,13 @@ export const createTask = async (req, res) => {
     return res.status(201).json({ task });
 };
 
-// READ 목록  GET /tasks
+// GET /tasks
 export const listTasks = async (req, res) => {
     const tasks = await Task.find({ owner: req.user.id }).sort({ createdAt: -1 });
     return res.json({ tasks });
 };
 
-// READ 하나  GET /tasks/:id
+// GET /tasks/:id
 export const getTask = async (req, res) => {
     const task = await findMyTask(req);
     if (!task) return res.status(404).json({ error: 'Task not found' });

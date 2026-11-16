@@ -14,7 +14,7 @@ export { fetchEvents };
 
 const dateValue = z
   .union([z.iso.datetime({ offset: true, local: true }), z.iso.date()], {
-    error: 'Must put in a valid date',
+    error: 'Enter a valid date',
   })
   .transform((s) => new Date(s));
 
