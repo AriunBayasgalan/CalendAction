@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only: CI only checks out and tests the code
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR cancels the older run
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-app/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: my-app/backend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Tests use mongodb-memory-server, so no database or secrets are needed
+      - name: Test
+        run: npm test
+
+  frontend:
+    name: Frontend lint, tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-app/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: my-app/frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
