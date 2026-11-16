@@ -7,6 +7,8 @@ export type CalendarEvent = {
   end: string
   location?: string
   notes?: string
+  // True for a placed task drawn on the grid; those aren't events and can't be edited there.
+  isTask?: boolean
 }
 
 export type PlacedEvent = {

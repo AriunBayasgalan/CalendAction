@@ -64,9 +64,14 @@
 }
 
 .error,
-.empty {
+.empty,
+.placed {
   margin: 0;
   font-size: 14px;
+}
+
+.placed {
+  color: var(--text-h);
 }
 
 .error {
@@ -126,5 +131,18 @@
       color: var(--accent);
       border-color: var(--accent);
     }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+  }
+
+  /* Place is the main action on a card */
+  .place,
+  .place:hover {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
   }
 }

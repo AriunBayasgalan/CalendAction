@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import AddClassDialog from '../components/AddClassDialog.tsx'
 import EditEventDialog from '../components/EditEventDialog.tsx'
-import TaskForm from '../components/TaskForm.tsx'
+import TaskForm, { type Task } from '../components/TaskForm.tsx'
 import type { CalendarEvent } from '../components/events.ts'
 import WeekGrid from '../components/WeekGrid.tsx'
 import WeekHeader from '../components/WeekHeader.tsx'
@@ -27,6 +27,13 @@ function WeekPage() {
   const [attempt, setAttempt] = useState(0)
   // The event open in the edit dialog, or null when it's closed.
   const [editing, setEditing] = useState<CalendarEvent | null>(null)
+  // Kept in sync by TaskForm, so placed tasks show on the grid right away
+  const [tasks, setTasks] = useState<Task[]>([])
+  const taskBlocks: CalendarEvent[] = tasks.flatMap((task) =>
+    task.status === 'scheduled' && task.start && task.end
+      ? [{ _id: task._id, title: task.title, start: task.start, end: task.end, isTask: true }]
+      : [],
+  )
 
   // Fetch only the selected week and refetch when it changes. The cleanup aborts the
   // previous request, so a slow response for an old week can't overwrite the current one.
@@ -97,10 +104,10 @@ function WeekPage() {
         <WeekGrid
           weekStart={weekStart}
           now={now}
-          events={result.events}
+          events={[...result.events, ...taskBlocks]}
           onSelectEvent={setEditing}
         />
-        <TaskForm />
+        <TaskForm onTasksChange={setTasks} />
       </div>
       <EditEventDialog
         event={editing}
