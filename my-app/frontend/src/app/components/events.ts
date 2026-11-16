@@ -1,5 +1,5 @@
 import { parseApiError } from './apiErrors.ts'
-import { GRID_END_HOUR, GRID_START_HOUR, HOURS, isSameDay } from './week.ts'
+import { GRID_END_HOUR, GRID_START_HOUR, HOURS, formatTime, formatWeekday, isSameDay } from './week.ts'
 
 export type CalendarEvent = {
   _id: string
@@ -10,6 +10,8 @@ export type CalendarEvent = {
   notes?: string
   // True for a placed task drawn on the grid; those aren't events and can't be edited there.
   isTask?: boolean
+  // A placed task's to-do, exactly as typed in the task form
+  todoText?: string
 }
 
 export type PlacedEvent = {
@@ -24,6 +26,13 @@ export type PlacedEvent = {
   lanes: number
   // Zero-minute events (start === end) have no height: they are drawn as a marker at `top`.
   instant: boolean
+}
+
+// "9:00 AM – 10:00 AM", "Mon 9:00 AM – Wed 5:00 PM" for multi-day events, "9:00 AM" for zero-minute ones
+export function formatEventTime(start: Date, end: Date, instant: boolean) {
+  if (instant) return formatTime(start)
+  if (isSameDay(start, end)) return `${formatTime(start)} – ${formatTime(end)}`
+  return `${formatWeekday(start)} ${formatTime(start)} – ${formatWeekday(end)} ${formatTime(end)}`
 }
 
 function hourOf(date: Date) {

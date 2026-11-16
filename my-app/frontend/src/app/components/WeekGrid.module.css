@@ -135,12 +135,17 @@
   border-radius: 6px;
   background: color-mix(in srgb, var(--accent) 18%, var(--bg));
   color: var(--text-h);
+  /* Placed tasks are buttons too (click to open the panel) */
+  font: inherit;
   font-size: 12px;
   line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
 }
 
 .event,
-.eventMarker {
+.eventMarker,
+.task {
   &:focus-visible {
     outline: 2px solid var(--text-h);
     outline-offset: 1px;

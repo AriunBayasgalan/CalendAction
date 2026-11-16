@@ -1,0 +1,37 @@
+.kind {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 14px;
+
+  dt {
+    color: var(--text);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-h);
+    min-width: 0;
+  }
+}
+
+/* Show the to-do exactly as typed: keep line breaks and spaces, wrap long words */
+.todo {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  font-style: italic;
+  color: var(--text);
+}
