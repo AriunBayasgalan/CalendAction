@@ -353,6 +353,7 @@ describe('scheduled task updates', () => {
             body: { dueDate: '2027-03-02T16:00:00.000Z' },
         });
         assert.equal(atEnd.status, 200, atEnd.text);
+        assert.equal(atEnd.json.moved, undefined);
         assert.equal(atEnd.json.task.status, 'scheduled');
         assert.equal(atEnd.json.task.start, slot.start.toISOString());
         assert.equal(atEnd.json.task.end, slot.end.toISOString());
@@ -372,17 +373,37 @@ describe('scheduled task updates', () => {
         assert.equal(cleared.json.task.dueDate, undefined);
     });
 
-    test('a due date earlier than the slot end unschedules the task and clears start/end', async () => {
+    test('a due date earlier than the slot end re-places the task when a hole still fits', async () => {
         const id = await scheduledTask();
         const res = await call('PATCH', `/tasks/${id}`, {
             user: userA,
             body: { dueDate: '2027-03-02T15:59:59.000Z' },
         });
         assert.equal(res.status, 200, res.text);
+        assert.equal(res.json.moved, true);
+        assert.equal(res.json.task.status, 'scheduled');
+        assert.ok(res.json.task.start);
+        assert.ok(res.json.task.end);
+        assert.notEqual(res.json.task.start, slot.start.toISOString());
+        assert.ok(new Date(res.json.task.end) <= new Date(res.json.task.dueDate));
+        assert.equal(new Date(res.json.task.end) - new Date(res.json.task.start), 60 * 60000);
+        const saved = await Task.findById(id).lean();
+        assert.equal(saved.status, 'scheduled');
+        assert.equal(saved.start.toISOString(), res.json.task.start);
+    });
+
+    test('a due date earlier than the slot end unschedules the task when no hole fits', async () => {
+        const id = await scheduledTask();
+        const res = await call('PATCH', `/tasks/${id}`, {
+            user: userA,
+            body: { dueDate: '2020-01-01T00:00:00.000Z' },
+        });
+        assert.equal(res.status, 200, res.text);
+        assert.equal(res.json.moved, undefined);
         assert.equal(res.json.task.status, 'unscheduled');
         assert.equal(res.json.task.start, undefined);
         assert.equal(res.json.task.end, undefined);
-        assert.equal(new Date(res.json.task.dueDate).toISOString(), '2027-03-02T15:59:59.000Z');
+        assert.equal(new Date(res.json.task.dueDate).toISOString(), '2020-01-01T00:00:00.000Z');
         const saved = await Task.findById(id).lean();
         assert.equal(saved.status, 'unscheduled');
         assert.equal(saved.start, undefined);

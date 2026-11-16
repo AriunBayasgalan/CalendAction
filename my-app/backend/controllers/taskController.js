@@ -123,8 +123,45 @@ export const updateTask = async (req, res) => {
     Object.assign(task, rest);
     // dueDate: null clears the deadline, a date sets it, undefined leaves it alone
     if (dueDate !== undefined) task.dueDate = dueDate ?? undefined;
-    // The Task model clears start/end when status is unscheduled.
-    if (durationChanged || dueDateBeforeSlot) task.status = 'unscheduled';
+
+    // A duration change always unschedules; the Task model clears start/end.
+    if (durationChanged) {
+        task.status = 'unscheduled';
+        await task.save();
+        return res.json({ task });
+    }
+
+    // Due date now before the slot: try to re-place, and only unschedule if
+    // no earlier hole fits. findSlotForTask ignores this task's own old slot.
+    if (dueDateBeforeSlot) {
+        const ownerId = req.user.id;
+        try {
+            return await withOwnerLock(ownerId, async () => {
+                for (let attempt = 0; attempt < MAX_SLOT_ATTEMPTS; attempt++) {
+                    const result = await findSlotForTask(task, timeZone, ownerId);
+                    if (!result.found) break;
+
+                    task.start = result.start;
+                    task.end = result.end;
+                    task.status = 'scheduled';
+                    await task.save();
+
+                    if (!(await overlapsOtherBlock(ownerId, task._id, result.start, result.end))) {
+                        return res.json({ task, moved: true });
+                    }
+                    // Another write took this slot at the same moment: try the next one.
+                }
+
+                task.status = 'unscheduled';
+                await task.save();
+                return res.json({ task });
+            });
+        } catch (error) {
+            console.error('updateTask', error);
+            return res.status(500).json({ error: 'Server error' });
+        }
+    }
+
     await task.save();
     return res.json({ task });
 };

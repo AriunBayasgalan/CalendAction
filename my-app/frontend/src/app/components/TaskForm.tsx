@@ -252,7 +252,12 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
           ? prev.map((task) => (task._id === data.task._id ? data.task : task))
           : [data.task, ...prev],
       )
-      if (wasScheduled && data.task.status === 'unscheduled') {
+      if (wasScheduled && data.moved && data.task.status === 'scheduled' && data.task.start) {
+        setPlacedIsAlert(false)
+        setPlacedMessage(
+          `“${data.task.title}” moved to ${placedFormat.format(new Date(data.task.start))} to fit the new due date`,
+        )
+      } else if (wasScheduled && data.task.status === 'unscheduled') {
         const dueNow = data.task.dueDate ? new Date(data.task.dueDate) : null
         const slotEnd = previous.end ? new Date(previous.end) : null
         if (dueNow && slotEnd && dueNow < slotEnd) {
