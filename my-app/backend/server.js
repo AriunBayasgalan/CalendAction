@@ -30,16 +30,6 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/health", healthRoutes);
-//tells the server to use the imported file
-app.get("/bad-request", (_req, _res, next) => {
-  const err = new Error("Bad request");
-  err.status = 400;
-  next(err);
-});
-// Demo route: deliberately crashes so the 500 handler can be seen
-app.get("/crash", () => {
-  throw new Error("Demo crash");
-});
 app.use("/rules", ruleRoutes);
 
 app.get('/auth/me', requireAuth, async (req, res) => {
@@ -77,7 +67,8 @@ async function connectMongo() {
   try {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
     await mongoose.connection.db.admin().ping();
-    console.log("MongoDB ping succeeded. Connected to Atlas.");
+    // Only the database name: the URI can contain credentials, so it is never logged
+    console.log(`Connected to MongoDB (db: ${mongoose.connection.name})`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`MongoDB connection failed: ${message}`);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import mongoose from "mongoose";
 import Rule from "../models/rule.model.js";
+import { sendValidationError } from "../services/apiErrors.js";
 
 // Matches times like "09:30" or "18:00" (24-hour clock)
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -22,13 +23,7 @@ export async function createRule(req, res) {
   const result = ruleSchema.safeParse(req.body);
 
   if (!result.success) {
-    return res.status(400).json({
-      error: "Invalid rule",
-      details: result.error.issues.map((issue) => ({
-        field: issue.path.join("."),
-        message: issue.message,
-      })),
-    });
+    return sendValidationError(res, result.error, "Invalid rule");
   }
 
   const rule = await Rule.create({ ...result.data, owner: req.user.id });
@@ -52,13 +47,7 @@ export async function updateRule(req, res) {
   const result = ruleSchema.safeParse(req.body);
 
   if (!result.success) {
-    return res.status(400).json({
-      error: "Invalid rule",
-      details: result.error.issues.map((issue) => ({
-        field: issue.path.join("."),
-        message: issue.message,
-      })),
-    });
+    return sendValidationError(res, result.error, "Invalid rule");
   }
 
   // Scoped to the owner, so someone else's rule looks like it doesn't exist (404).

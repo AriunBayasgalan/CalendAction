@@ -1,23 +1,20 @@
 import { STATUS_CODES } from "node:http";
 import mongoose from "mongoose";
 
-// Builds text like "400 Bad Request" from a status number
-function statusLine(code) {
-  return `${code} ${STATUS_CODES[code]}`;
-}
+// Every error response uses the same JSON shape as the controllers:
+//   { error: string, details?: [{ field, message }] }
 
 // Runs when no route matched the request
 export function notFound(req, res) {
-  res
-    .status(404)
-    .type("text")
-    .send(`404 Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
 }
 
-// Runs when something throws an error anywhere in the app
+// Runs when something throws an error anywhere in the app (Express 5 also sends
+// rejected promises from async handlers here)
 export function errorHandler(err, req, res, next) {
-  // Mongoose validation failures use the same JSON shape as Zod errors in the controllers:
-  // { error, details: [{ field, message }] }
+  if (res.headersSent) return next(err);
+
+  // Mongoose validation failures: same shape as Zod errors in the controllers
   if (err instanceof mongoose.Error.ValidationError) {
     return res.status(400).json({
       error: "Validation failed",
@@ -28,11 +25,18 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
-  const status = err.status || 500;
-  const message =
-    status === 500 ? "500 Internal server error" : statusLine(status);
+  // Malformed JSON body (from express.json())
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid JSON body" });
+  }
 
-  if (status === 500) console.error(err);
+  const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600 ? err.status : 500;
 
-  res.status(status).type("text").send(message);
+  if (status >= 500) {
+    // Log the real error for debugging; never send its details to the client
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+
+  res.status(status).json({ error: STATUS_CODES[status] ?? "Request failed" });
 }

@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import User from '../models/User.js';
+import { sendValidationError } from '../services/apiErrors.js';
 
 const credentials = z.object({
   email: z.email(),
@@ -13,10 +14,7 @@ const signToken = (user) =>
 
 export const register = async (req, res) => {
   const parsed = credentials.safeParse(req.body);
-  if (!parsed.success) {
-      const err = z.treeifyError(parsed.error);
-    return res.status(400).json({ error: 'Invalid input', err });
-  }
+  if (!parsed.success) return sendValidationError(res, parsed.error, 'Invalid input');
   const { email, password } = parsed.data;
 
   try {
@@ -34,9 +32,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   const parsed = credentials.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid input' });
-  }
+  if (!parsed.success) return sendValidationError(res, parsed.error, 'Invalid input');
   const { email, password } = parsed.data;
 
   try {

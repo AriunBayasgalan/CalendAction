@@ -1,4 +1,5 @@
-import { DAY_END_HOUR, DAY_START_HOUR, HOURS, isSameDay } from './week.ts'
+import { parseApiError } from './apiErrors.ts'
+import { GRID_END_HOUR, GRID_START_HOUR, HOURS, isSameDay } from './week.ts'
 
 export type CalendarEvent = {
   _id: string
@@ -15,7 +16,7 @@ export type PlacedEvent = {
   event: CalendarEvent
   start: Date
   end: Date
-  // Fractions of the visible day: 0 is DAY_START_HOUR, 1 is DAY_END_HOUR.
+  // Fractions of the drawn day: 0 is GRID_START_HOUR (midnight), 1 is GRID_END_HOUR.
   top: number
   height: number
   // Overlapping events sit side by side: this one is in `lane` out of `lanes`.
@@ -30,7 +31,7 @@ function hourOf(date: Date) {
 }
 
 // Events that overlap `day` (so multi-day events show on every day they cover), clipped to
-// the visible hours and split into lanes so overlapping events stay visible.
+// the drawn hours and split into lanes so overlapping events stay visible.
 export function layoutDay(events: CalendarEvent[], day: Date) {
   const placed: PlacedEvent[] = []
   const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate())
@@ -47,12 +48,12 @@ export function layoutDay(events: CalendarEvent[], day: Date) {
       : start < dayEnd && end > dayStart
     if (!onDay) continue
 
-    const from = Math.max(isSameDay(start, day) ? hourOf(start) : 0, DAY_START_HOUR)
-    const to = isSameDay(end, day) ? Math.min(hourOf(end), DAY_END_HOUR) : DAY_END_HOUR
+    const from = Math.max(isSameDay(start, day) ? hourOf(start) : 0, GRID_START_HOUR)
+    const to = isSameDay(end, day) ? Math.min(hourOf(end), GRID_END_HOUR) : GRID_END_HOUR
 
     if (instant) {
-      // Outside the visible hours there is nowhere to draw the marker.
-      if (hourOf(start) < DAY_START_HOUR || hourOf(start) > DAY_END_HOUR) continue
+      // Outside the drawn hours there is nowhere to draw the marker.
+      if (hourOf(start) < GRID_START_HOUR || hourOf(start) > GRID_END_HOUR) continue
     } else if (to <= from) {
       continue
     }
@@ -61,7 +62,7 @@ export function layoutDay(events: CalendarEvent[], day: Date) {
       event,
       start,
       end,
-      top: (from - DAY_START_HOUR) / HOURS.length,
+      top: (from - GRID_START_HOUR) / HOURS.length,
       height: instant ? 0 : (to - from) / HOURS.length,
       lane: 0,
       lanes: 1,
@@ -112,26 +113,23 @@ export type ApiErrors = {
   fields: Partial<Record<EventField, string>>
 }
 
-// Error body from the API, e.g. validationError (zod flattenError):
-// { error: 'Validation failed', details: { end: ['End cannot be before start'] } }
-type ErrorBody = {
-  error?: string
-  details?: Record<string, string[] | undefined>
-}
-
 const KNOWN_FIELDS: EventField[] = ['title', 'start', 'end', 'location', 'notes']
 
-// Turns any non-2xx event response into messages the form can show.
+// Turns any non-2xx event response into messages the form can show. Field errors
+// go next to their input; anything else (including problems with fields the form
+// has no input for) is shown at the top of the form.
 export function readApiErrors(body: unknown, status: number): ApiErrors {
-  const { error, details } = (body ?? {}) as ErrorBody
+  const { error, details } = parseApiError(body)
   const form: string[] = []
   const fields: ApiErrors['fields'] = {}
 
-  for (const [key, messages] of Object.entries(details ?? {})) {
-    const message = messages?.[0]
-    if (!message) continue
-    if ((KNOWN_FIELDS as string[]).includes(key)) fields[key as EventField] = message
-    else form.push(`${key}: ${message}`)
+  for (const { field, message } of details) {
+    if ((KNOWN_FIELDS as string[]).includes(field)) {
+      // Keep the first message per field
+      fields[field as EventField] ??= message
+    } else {
+      form.push(field ? `${field}: ${message}` : message)
+    }
   }
 
   // With field errors, `error` is just the "Validation failed" summary, so skip it.

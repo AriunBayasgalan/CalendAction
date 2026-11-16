@@ -4,7 +4,15 @@ import Task from '../models/Task.js';
 import { findNextHole } from '../services/findNextHole.js';
 import { fetchEvents } from './eventController.js';
 import Rule from '../models/rule.model.js';
+import Event from '../models/Event.js';
 import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
+import { withOwnerLock } from '../services/ownerLock.js';
+import { sendValidationError } from '../services/apiErrors.js';
+
+// How many slots place/skip try when a write turns out to overlap something
+// another request wrote at the same moment.
+const MAX_SLOT_ATTEMPTS = 3;
+const NO_OPEN_TIME = 'No open time this week or next';
 
 // 1) 입력 검증 규칙
 // Unexpected fields are stripped (Zod's default): they are ignored, not rejected.
@@ -69,7 +77,7 @@ export const createTask = async (req, res) => {
     if (!timeZone) return;
     const parsed = taskInput(timeZone).safeParse(req.body);
     if (!parsed.success) {
-        return res.status(400).json({ error: 'Invalid input', details: z.treeifyError(parsed.error) });
+        return sendValidationError(res, parsed.error, 'Invalid input');
     }
     const { dueDate, ...rest } = parsed.data;
     // null (or missing) dueDate means no deadline: leave the field unset
@@ -96,7 +104,7 @@ export const updateTask = async (req, res) => {
     if (!timeZone) return;
     const parsed = taskUpdate(timeZone).safeParse(req.body);
     if (!parsed.success) {
-        return res.status(400).json({ error: 'Invalid input', details: z.treeifyError(parsed.error) });
+        return sendValidationError(res, parsed.error, 'Invalid input');
     }
     const task = await findMyTask(req);
     if (!task) return res.status(404).json({ error: 'Task not found' });
@@ -142,68 +150,110 @@ export async function findSlotForTask(task, timeZone, ownerId, from = new Date()
   });
 }
 
-export const placeTask = async(req, res) => {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
-    try {
-        const timeZone = readTimeZone(req, res);
-        if (!timeZone) return;
-
-        const task = await Task.findOne({ _id: req.params.id, owner: req.user.id });
-        if (!task) return res.status(404).json({ error: "Task not found"});
-        if (task.status == 'scheduled') return res.status(400).json({error: "Task is already scheduled"});
-
-        const result = await findSlotForTask(task, timeZone, req.user.id);
-        if (!result.found) {
-        return res.status(409).json({ error: result.message });
-        }
-        const updated = await Task.findOneAndUpdate(
-            { _id: task._id, owner: req.user.id, status: 'unscheduled' },
-            { $set: { start: result.start, end: result.end, status: 'scheduled' } },
-            { new: true, runValidators: true }
-        );
-
-        if (!updated) {
-        return res.status(409).json({ error: 'Task is already scheduled' });
-        }
-
-        return res.json(updated);
-
-    } catch (error) {
-        console.error('placeTask', error);
-        return res.status(500).json({error: "Server error"});
-    }
-
+// True if [start, end) overlaps another scheduled task or an event of this owner.
+// Runs after a write, to catch a conflicting write that raced this one (e.g. from
+// another server instance, which the in-process lock can't see).
+async function overlapsOtherBlock(ownerId, taskId, start, end) {
+  const [task, event] = await Promise.all([
+    Task.exists({
+      owner: ownerId,
+      status: 'scheduled',
+      _id: { $ne: taskId },
+      start: { $lt: end },
+      end: { $gt: start },
+    }),
+    Event.exists({ owner: ownerId, start: { $lt: end }, end: { $gt: start } }),
+  ]);
+  return Boolean(task || event);
 }
 
-export const skipTask = async(req, res) => {
+export const placeTask = async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    const timeZone = readTimeZone(req, res);
+    if (!timeZone) return;
+    const ownerId = req.user.id;
+
     try {
-        const timeZone = readTimeZone(req, res);
-        if (!timeZone) return;
+        // One place/skip at a time per user, so two requests can't pick the same slot
+        return await withOwnerLock(ownerId, async () => {
+            const task = await Task.findOne({ _id: req.params.id, owner: ownerId });
+            if (!task) return res.status(404).json({ error: "Task not found" });
+            if (task.status == 'scheduled') return res.status(400).json({ error: "Task is already scheduled" });
 
-        const task = await Task.findOne({ _id: req.params.id, owner: req.user.id });
-        if (!task) return res.status(404).json({ error: "Task not found"});
-        if (task.status == 'unscheduled') return res.status(400).json({error: "Task is not scheduled"});
-        const from = new Date(Math.max(task.end.getTime(), Date.now()));
+            for (let attempt = 0; attempt < MAX_SLOT_ATTEMPTS; attempt++) {
+                const result = await findSlotForTask(task, timeZone, ownerId);
+                if (!result.found) return res.status(409).json({ error: result.message });
 
-        const result = await findSlotForTask(task, timeZone, req.user.id, from);
-        const filter = { _id: task._id, owner: req.user.id, status: "scheduled" };
-        const update = result.found
-        ? { $set: { start: result.start, end: result.end } }
-        : { $set: { status: "unscheduled" }, $unset: { start: 1, end: 1 } }; // removes start and end from the document
+                const updated = await Task.findOneAndUpdate(
+                    { _id: task._id, owner: ownerId, status: 'unscheduled' },
+                    { $set: { start: result.start, end: result.end, status: 'scheduled' } },
+                    { returnDocument: "after", runValidators: true }
+                );
+                if (!updated) return res.status(409).json({ error: 'Task is already scheduled' });
 
-        const updated = await Task.findOneAndUpdate(filter, update, {
-            new: true,
-            runValidators: true,
-            });
-        if (!updated) {
-        return res.status(409).json({ error: "Task changed, try again" });
-        }
-        return res.json(updated);
+                if (!(await overlapsOtherBlock(ownerId, task._id, result.start, result.end))) {
+                    return res.json(updated);
+                }
 
+                // Another write took this slot at the same moment: give it back and try the next one
+                await Task.findOneAndUpdate(
+                    { _id: task._id, owner: ownerId, status: 'scheduled', start: result.start },
+                    { $set: { status: 'unscheduled' }, $unset: { start: 1, end: 1 } }
+                );
+            }
+
+            return res.status(409).json({ error: NO_OPEN_TIME });
+        });
+    } catch (error) {
+        console.error('placeTask', error);
+        return res.status(500).json({ error: "Server error" });
     }
-    catch (error) {
+}
+
+export const skipTask = async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
+    const timeZone = readTimeZone(req, res);
+    if (!timeZone) return;
+    const ownerId = req.user.id;
+
+    try {
+        // Shares the per-user lock with placeTask
+        return await withOwnerLock(ownerId, async () => {
+            const task = await Task.findOne({ _id: req.params.id, owner: ownerId });
+            if (!task) return res.status(404).json({ error: "Task not found" });
+            if (task.status == 'unscheduled') return res.status(400).json({ error: "Task is not scheduled" });
+            const from = new Date(Math.max(task.end.getTime(), Date.now()));
+            const filter = { _id: task._id, owner: ownerId, status: "scheduled" };
+
+            for (let attempt = 0; attempt < MAX_SLOT_ATTEMPTS; attempt++) {
+                const result = await findSlotForTask(task, timeZone, ownerId, from);
+                if (!result.found) break;
+
+                const updated = await Task.findOneAndUpdate(
+                    filter,
+                    { $set: { start: result.start, end: result.end } },
+                    { returnDocument: "after", runValidators: true }
+                );
+                if (!updated) return res.status(409).json({ error: "Task changed, try again" });
+
+                if (!(await overlapsOtherBlock(ownerId, task._id, result.start, result.end))) {
+                    return res.json(updated);
+                }
+                // Another write took this slot at the same moment: try the next one.
+                // The task's own (conflicting) slot is ignored by findSlotForTask.
+            }
+
+            // No later hole (or every try collided): back to "Needs a slot" (CA-19)
+            const updated = await Task.findOneAndUpdate(
+                filter,
+                { $set: { status: "unscheduled" }, $unset: { start: 1, end: 1 } }, // removes start and end from the document
+                { returnDocument: "after", runValidators: true }
+            );
+            if (!updated) return res.status(409).json({ error: "Task changed, try again" });
+            return res.json(updated);
+        });
+    } catch (error) {
         console.error('skipTask', error);
-        return res.status(500).json({error: "Server error"});
+        return res.status(500).json({ error: "Server error" });
     }
 }

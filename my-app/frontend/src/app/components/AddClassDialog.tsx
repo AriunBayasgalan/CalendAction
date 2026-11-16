@@ -29,7 +29,7 @@ function optional(value: FormDataEntryValue | null) {
 const STATUS_MS = 5000
 
 function AddClassDialog({ defaultDate, onCreated }: AddClassDialogProps) {
-  const { apiFetch } = useAuth()
+  const { apiFetch, logout } = useAuth()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const [errors, setErrors] = useState<ApiErrors>(NO_ERRORS)
@@ -78,6 +78,11 @@ function AddClassDialog({ defaultDate, onCreated }: AddClassDialogProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      // Expired or invalid login: sign out like the rest of the app
+      if (response.status === 401) {
+        logout()
+        return
+      }
       const result: unknown = await response.json().catch(() => null)
       if (!response.ok) {
         setErrors(readApiErrors(result, response.status))
