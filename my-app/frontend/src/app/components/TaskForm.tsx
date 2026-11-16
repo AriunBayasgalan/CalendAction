@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
+import { placedFormat, scheduledTasks, skipMessage } from './tasks.ts'
 import { toIsoDate } from './week.ts'
 import styles from './TaskForm.module.css'
 
@@ -52,15 +53,6 @@ const dueFormat = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
 })
 
-// "Tue, Nov 10, 2:00 PM"
-const placedFormat = new Intl.DateTimeFormat(undefined, {
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-})
-
 // 90 -> "1 h 30 min"
 function formatDuration(minutes: number) {
   const hours = Math.floor(minutes / 60)
@@ -92,6 +84,9 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
   const [placeError, setPlaceError] = useState<{ id: string; message: string } | null>(null)
   // Where the last placed task went, since it may land in a week that isn't on screen
   const [placedMessage, setPlacedMessage] = useState('')
+  const [skippingIds, setSkippingIds] = useState<string[]>([])
+  // Why the last Skip failed, shown on that task's card
+  const [skipError, setSkipError] = useState<{ id: string; message: string } | null>(null)
 
   useEffect(() => {
     onTasksChange(tasks)
@@ -199,6 +194,38 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
     }
   }
 
+  // Moves a placed task to the next open slot after its current one. The grid redraws from the
+  // updated task; if nothing later fits, the API unschedules it and it returns to "Needs a slot".
+  async function handleSkip(id: string) {
+    if (skippingIds.includes(id)) return
+
+    setSkipError(null)
+    setPlacedMessage('')
+    setSkippingIds((prev) => [...prev, id])
+
+    try {
+      const res = await apiFetch(`/tasks/${id}/skip`, { method: 'POST' })
+
+      if (res.status === 401) {
+        logout()
+        return
+      }
+
+      if (!res.ok) {
+        setSkipError({ id, message: await readErrorMessage(res, 'Could not skip task.') })
+        return
+      }
+
+      const skipped: Task = await res.json()
+      setTasks((prev) => prev.map((task) => (task._id === skipped._id ? skipped : task)))
+      setPlacedMessage(skipMessage(skipped))
+    } catch {
+      setSkipError({ id, message: 'Could not skip task.' })
+    } finally {
+      setSkippingIds((prev) => prev.filter((skippingId) => skippingId !== id))
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (saving) return
@@ -250,6 +277,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
   }
 
   const unscheduled = tasks.filter((task) => task.status === 'unscheduled')
+  const scheduled = scheduledTasks(tasks)
 
   return (
     <aside className={styles.panel}>
@@ -352,6 +380,37 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
             </li>
           ))}
         </ul>
+      )}
+
+      {scheduled.length > 0 && (
+        <>
+          <h2>Scheduled</h2>
+          <ul className={styles.list}>
+            {scheduled.map((task) => (
+              <li key={task._id} className={styles.card}>
+                <strong className={styles.title}>{task.title}</strong>
+                <span className={styles.meta}>
+                  {placedFormat.format(new Date(task.start!))} ·{' '}
+                  {formatDuration(task.durationMinutes)}
+                </span>
+                {skipError?.id === task._id && (
+                  <p role="alert" className={styles.error}>
+                    {skipError.message}
+                  </p>
+                )}
+                <div className={styles.cardActions}>
+                  <button
+                    type="button"
+                    disabled={skippingIds.includes(task._id)}
+                    onClick={() => handleSkip(task._id)}
+                  >
+                    {skippingIds.includes(task._id) ? 'Skipping…' : 'Skip'}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </aside>
   )
