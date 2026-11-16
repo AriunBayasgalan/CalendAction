@@ -109,9 +109,16 @@ export const updateTask = async (req, res) => {
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     const { dueDate, ...rest } = parsed.data;
+    const durationChanged =
+        task.status === 'scheduled' &&
+        rest.durationMinutes !== undefined &&
+        rest.durationMinutes !== task.durationMinutes;
     Object.assign(task, rest);
     // dueDate: null clears the deadline, a date sets it, undefined leaves it alone
     if (dueDate !== undefined) task.dueDate = dueDate ?? undefined;
+    // A different duration may no longer fit this slot, so drop it back to unscheduled.
+    // The Task model clears start/end when status is unscheduled.
+    if (durationChanged) task.status = 'unscheduled';
     await task.save();
     return res.json({ task });
 };

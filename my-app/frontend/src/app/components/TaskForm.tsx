@@ -109,6 +109,7 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
     if (!window.confirm('Delete this task?')) return
 
     setError('')
+    setPlacedMessage('')
     setDeletingIds((prev) => [...prev, id])
 
     try {
@@ -238,11 +239,17 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
       }
 
       const data = await res.json()
+      const wasScheduled = tasks.find((task) => task._id === data.task._id)?.status === 'scheduled'
       setTasks((prev) =>
         editingId
           ? prev.map((task) => (task._id === data.task._id ? data.task : task))
           : [data.task, ...prev],
       )
+      if (wasScheduled && data.task.status === 'unscheduled') {
+        setPlacedMessage(
+          `“${data.task.title}” is back in Needs a slot because its duration changed.`,
+        )
+      }
       resetForm()
     } catch {
       setError('Could not save task.')
@@ -380,6 +387,16 @@ function TaskForm({ onTasksChange }: TaskFormProps) {
                     onClick={() => handleSkip(task._id)}
                   >
                     {skippingIds.includes(task._id) ? 'Skipping…' : 'Skip'}
+                  </button>
+                  <button type="button" onClick={() => startEdit(task)}>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deletingIds.includes(task._id)}
+                    onClick={() => handleDelete(task._id)}
+                  >
+                    {deletingIds.includes(task._id) ? 'Deleting…' : 'Delete'}
                   </button>
                 </div>
               </li>

@@ -278,3 +278,71 @@ describe('task validation', () => {
         assert.equal((await call('POST', '/tasks', { user: userA, body: { title: '   ', durationMinutes: 30 } })).status, 400);
     });
 });
+
+describe('scheduled task updates', () => {
+    const slot = {
+        status: 'scheduled',
+        start: new Date('2027-03-02T15:00:00.000Z'),
+        end: new Date('2027-03-02T16:00:00.000Z'),
+    };
+
+    async function scheduledTask(extra = {}) {
+        const created = await Task.create({
+            owner: userA,
+            title: 'Placed essay',
+            durationMinutes: 60,
+            todoText: 'Draft it',
+            ...slot,
+            ...extra,
+        });
+        return created._id.toString();
+    }
+
+    test('title, notes and due date edits keep the scheduled slot', async () => {
+        const id = await scheduledTask();
+
+        const title = await call('PATCH', `/tasks/${id}`, { user: userA, body: { title: 'New title' } });
+        assert.equal(title.status, 200);
+        assert.equal(title.json.task.status, 'scheduled');
+        assert.equal(title.json.task.start, slot.start.toISOString());
+        assert.equal(title.json.task.end, slot.end.toISOString());
+
+        const notes = await call('PATCH', `/tasks/${id}`, { user: userA, body: { notes: 'A note', todoText: 'Updated' } });
+        assert.equal(notes.status, 200);
+        assert.equal(notes.json.task.status, 'scheduled');
+        assert.equal(notes.json.task.start, slot.start.toISOString());
+
+        const due = await call('PATCH', `/tasks/${id}`, { user: userA, body: { dueDate: '2027-03-20' } });
+        assert.equal(due.status, 200);
+        assert.equal(due.json.task.status, 'scheduled');
+        assert.equal(due.json.task.start, slot.start.toISOString());
+        assert.equal(due.json.task.end, slot.end.toISOString());
+    });
+
+    test('sending the same duration keeps the scheduled slot', async () => {
+        const id = await scheduledTask();
+        const res = await call('PATCH', `/tasks/${id}`, {
+            user: userA,
+            body: { title: 'Still placed', durationMinutes: 60 },
+        });
+        assert.equal(res.status, 200);
+        assert.equal(res.json.task.status, 'scheduled');
+        assert.equal(res.json.task.start, slot.start.toISOString());
+        assert.equal(res.json.task.end, slot.end.toISOString());
+    });
+
+    test('changing the duration unschedules the task and clears start/end', async () => {
+        const id = await scheduledTask();
+        const res = await call('PATCH', `/tasks/${id}`, { user: userA, body: { durationMinutes: 90 } });
+        assert.equal(res.status, 200, res.text);
+        assert.equal(res.json.task.status, 'unscheduled');
+        assert.equal(res.json.task.durationMinutes, 90);
+        assert.equal(res.json.task.start, undefined);
+        assert.equal(res.json.task.end, undefined);
+        const saved = await Task.findById(id).lean();
+        assert.equal(saved.status, 'unscheduled');
+        assert.equal(saved.start, undefined);
+        assert.equal(saved.end, undefined);
+    });
+});
+
