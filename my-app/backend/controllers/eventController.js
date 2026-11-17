@@ -4,6 +4,7 @@ import { sendValidationError } from '../services/apiErrors.js';
 import { fetchEvents } from '../services/eventQuery.js';
 import { withOwnerLock } from '../services/ownerLock.js';
 import { defaultTimeZone, resolveTimeZone } from '../services/timeZone.js';
+import { todoDoneInput } from '../services/todoDone.js';
 import {
   evictOverlappingTasks,
   findOverlappingEvent,
@@ -24,6 +25,8 @@ const eventFields = z.object({
   end: dateValue,
   location: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(2000).optional(),
+  // CA-24: checked-off lines of notes (the class's to-do)
+  todoDone: todoDoneInput.optional(),
 });
 
 // set as true if end is correctly not before start
@@ -141,6 +144,15 @@ export async function updateEvent(req, res) {
         error: 'Validation failed',
         details: [{ field: 'end', message: 'End must not be before start' }],
       });
+    }
+
+    // New notes means the old line numbers no longer match: start unchecked
+    if (
+      parsed.data.notes !== undefined &&
+      parsed.data.notes !== (existing.notes ?? '') &&
+      parsed.data.todoDone === undefined
+    ) {
+      parsed.data.todoDone = [];
     }
 
     const timeChanged =

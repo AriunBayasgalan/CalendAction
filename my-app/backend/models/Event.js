@@ -7,6 +7,8 @@ const eventSchema = new mongoose.Schema(
     end: { type: Date, required: true },
     location: { type: String, trim: true, maxlength: 200 },
     notes: { type: String, trim: true, maxlength: 2000 },
+    // CA-24: indexes of the notes lines (the class's to-do) the user checked off
+    todoDone: { type: [Number], default: [] },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   },
   { timestamps: true }

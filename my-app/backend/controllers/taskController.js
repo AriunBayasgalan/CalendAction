@@ -3,6 +3,7 @@ import Task from '../models/Task.js';
 import { dueDateEndOfDay, resolveTimeZone } from '../services/timeZone.js';
 import { withOwnerLock } from '../services/ownerLock.js';
 import { sendValidationError } from '../services/apiErrors.js';
+import { todoDoneInput } from '../services/todoDone.js';
 import { hasValidId } from '../middleware/requireValidId.js';
 import {
     MAX_SLOT_ATTEMPTS,
@@ -51,6 +52,7 @@ const taskInput = (timeZone) =>
 // Updates may send only some fields, but at least one known field is required
 const taskUpdate = (timeZone) =>
     taskInput(timeZone)
+        .extend({ todoDone: todoDoneInput.optional() })
         .partial()
         .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });
 
@@ -118,6 +120,10 @@ export const updateTask = async (req, res) => {
         dueDate &&
         task.end &&
         dueDate < task.end;
+    // New to-do text means the old line numbers no longer match: start unchecked
+    if (rest.todoText !== undefined && rest.todoText !== task.todoText && rest.todoDone === undefined) {
+        rest.todoDone = [];
+    }
     Object.assign(task, rest);
     // dueDate: null clears the deadline, a date sets it, undefined leaves it alone
     if (dueDate !== undefined) task.dueDate = dueDate ?? undefined;
