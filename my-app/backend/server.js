@@ -10,15 +10,16 @@ import requireAuth from './middleware/requireAuth.js';
 import healthRoutes from "./routes/health.routes.js";
 import ruleRoutes from "./routes/rule.routes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import { allowedOrigins, corsOriginCallback } from "./services/corsOrigins.js";
 import User from './models/User.js';
 
 const port = Number(process.env.PORT) || 5000;
-const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const clientOrigins = allowedOrigins();
 const mongoUri = process.env.MONGODB_URI;
 
 const app = express();
 
-app.use(cors({ origin: clientOrigin }));
+app.use(cors({ origin: corsOriginCallback(clientOrigins) }));
 app.use(express.json());
 
 if (!process.env.JWT_SECRET) {
@@ -56,7 +57,7 @@ app.use(errorHandler);
 //if there is a crash
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
-  console.log(`CORS origin: ${clientOrigin}`);
+  console.log(`CORS origins: ${clientOrigins.join(", ")}`);
   connectMongo();
 });
 
