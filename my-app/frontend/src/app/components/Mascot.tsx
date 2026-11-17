@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/auth.ts'
 import mascotUrl from '../../assets/mascot.svg'
 import type { CalendarEvent } from './events.ts'
 import { placedFormat } from './tasks.ts'
+import Button from './ui/Button.tsx'
 import { formatTime, isSameDay } from './week.ts'
 import styles from './Mascot.module.css'
 
@@ -116,9 +117,9 @@ function Mascot({ taskBlocks, onOpenBlock, onAddTask }: MascotProps) {
         <div className={styles.bubble} role="status">
           <p className={styles.line}>{line}</p>
           {action && (
-            <button type="button" className={styles.action} onClick={act}>
+            <Button type="button" size="sm" onClick={act}>
               {action}
-            </button>
+            </Button>
           )}
         </div>
       )}

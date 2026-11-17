@@ -8,6 +8,7 @@ import {
   type EventSaveResult,
 } from './events.ts'
 import { toIsoDate } from './week.ts'
+import Button from './ui/Button.tsx'
 import Field from './ui/Field.tsx'
 // Same look as the "Add class" dialog
 import styles from './AddClassDialog.module.css'
@@ -171,9 +172,9 @@ function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
           )}
 
           <div className={styles.actions}>
-            <button
+            <Button
               type="button"
-              className={styles.secondary}
+              variant="secondary"
               disabled={isBusy}
               onClick={() => {
                 if (!window.confirm('Delete this event?')) return
@@ -181,13 +182,13 @@ function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
               }}
             >
               Delete
-            </button>
-            <button type="button" className={styles.secondary} disabled={isBusy} onClick={close}>
+            </Button>
+            <Button type="button" variant="secondary" disabled={isBusy} onClick={close}>
               Cancel
-            </button>
-            <button type="submit" className={styles.primary} disabled={isBusy}>
+            </Button>
+            <Button type="submit" disabled={isBusy}>
               Save
-            </button>
+            </Button>
           </div>
         </form>
       )}

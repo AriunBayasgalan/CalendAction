@@ -4,6 +4,7 @@ import { readErrorMessage } from './apiErrors.ts'
 import { formatEventTime, startState, type CalendarEvent } from './events.ts'
 import { formatFullDate, formatTime } from './week.ts'
 // Same dialog frame and buttons as "Add class"; panel-only bits live in EventPanel.module.css
+import Button from './ui/Button.tsx'
 import dialogStyles from './AddClassDialog.module.css'
 import styles from './EventPanel.module.css'
 
@@ -224,26 +225,20 @@ function EventPanel({ event, now, onClose, onStarted, onEdit, onTodoSaved }: Eve
 
         <div className={dialogStyles.actions}>
           {!event.isTask && (
-            <button type="button" className={dialogStyles.secondary} onClick={() => onEdit(event)}>
+            <Button type="button" variant="secondary" onClick={() => onEdit(event)}>
               Edit
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            className={dialogStyles.secondary}
-            onClick={() => dialogRef.current?.close()}
-            autoFocus
-          >
+          <Button type="button" variant="secondary" onClick={() => dialogRef.current?.close()} autoFocus>
             Close
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={dialogStyles.primary}
             disabled={startingId !== null || state !== 'ready'}
             onClick={() => handleStart(event)}
           >
             {startLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </dialog>

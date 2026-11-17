@@ -8,6 +8,7 @@ import {
   type NewEvent,
 } from './events.ts'
 import { toIsoDate } from './week.ts'
+import Button from './ui/Button.tsx'
 import Field from './ui/Field.tsx'
 import styles from './AddClassDialog.module.css'
 
@@ -110,9 +111,9 @@ function AddClassDialog({ defaultDate, onCreated }: AddClassDialogProps) {
         <p className={styles.status} role="status">
           {status}
         </p>
-        <button type="button" className={styles.primary} data-add-class onClick={open}>
+        <Button type="button" data-add-class onClick={open}>
           Add class
-        </button>
+        </Button>
       </div>
 
       <dialog ref={dialogRef} className={styles.dialog} aria-labelledby="add-class-title">
@@ -171,12 +172,12 @@ function AddClassDialog({ defaultDate, onCreated }: AddClassDialogProps) {
           )}
 
           <div className={styles.actions}>
-            <button type="button" className={styles.secondary} onClick={close}>
+            <Button type="button" variant="secondary" onClick={close}>
               Cancel
-            </button>
-            <button type="submit" className={styles.primary} disabled={isSubmitting}>
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : 'Save class'}
-            </button>
+            </Button>
           </div>
         </form>
       </dialog>

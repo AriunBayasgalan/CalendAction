@@ -7,6 +7,7 @@ import {
   dismissId,
   type NagBlock,
 } from '../nagBanner.ts'
+import Button from './ui/Button.tsx'
 import { useNow } from './useNow.ts'
 import styles from './NagBanner.module.css'
 
@@ -35,9 +36,9 @@ function NagBanner({ blocks, storage = localStorage }: NagBannerProps) {
   return (
     <div className={styles.banner} role="status">
       <p className={styles.line}>{pickStartingSoonLine(block)}</p>
-      <button type="button" className={styles.dismiss} onClick={dismiss}>
+      <Button type="button" size="sm" variant="secondary" onClick={dismiss}>
         Dismiss
-      </button>
+      </Button>
     </div>
   )
 }

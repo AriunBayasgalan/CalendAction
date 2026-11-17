@@ -2,36 +2,83 @@
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+  background: var(--surface-muted);
+}
+
+.skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 50;
+  padding: 8px 12px;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 8px;
+  font-weight: 650;
+  text-decoration: none;
+
+  &:focus {
+    top: 12px;
+  }
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 24px;
+  min-height: var(--header-height);
+  padding: 10px 24px;
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 
 .brand {
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   color: var(--text-h);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   text-decoration: none;
+
+  img {
+    display: block;
+    flex: none;
+  }
 }
 
 .nav {
   display: flex;
+  align-items: center;
   gap: 4px;
 }
 
-.link {
+.link,
+.signup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
 
   &:hover {
     color: var(--text-h);
+    background: var(--surface-muted);
   }
 
   &[aria-current='page'] {
@@ -40,22 +87,57 @@
   }
 }
 
+.logout {
+  color: var(--text-h);
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.signup {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+
+  &:hover {
+    color: var(--bg);
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  &[aria-current='page'] {
+    color: var(--bg);
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+}
+
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  min-width: 0;
+  padding: 20px 24px 28px;
 }
 
-@media (max-width: 480px) {
+.quiet {
+  background:
+    radial-gradient(720px 280px at 50% -80px, var(--accent-bg), transparent 70%),
+    var(--surface-muted);
+}
+
+@media (max-width: 640px) {
   .header {
     flex-wrap: wrap;
-    padding: 10px 12px;
     gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .nav {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .main {
     padding: 12px;
-    min-width: 0;
   }
 }
