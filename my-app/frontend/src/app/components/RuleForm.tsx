@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import { readErrorMessage } from './apiErrors.ts'
+import Button from './ui/Button.tsx'
 import styles from './RuleForm.module.css'
 
 type Rule = {
@@ -68,6 +69,10 @@ function RuleForm() {
 
     return () => controller.abort()
   }, [apiFetch, logout, loadAttempt])
+
+  useEffect(() => {
+    document.title = 'Rules · CalendAction'
+  }, [])
 
   function startEdit(rule: Rule) {
     setError('')
@@ -154,8 +159,11 @@ function RuleForm() {
   }
 
   return (
-    <section className={styles.wrapper}>
-      <h2>Rules</h2>
+    <section className={styles.page} aria-labelledby="rules-title">
+      <header className={styles.intro}>
+        <h1 id="rules-title">Rules</h1>
+        <p>Tasks are placed only inside these hours. Add a window for mornings, evenings, or a full study day.</p>
+      </header>
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <label>
@@ -185,14 +193,16 @@ function RuleForm() {
             onChange={(e) => setLabel(e.target.value)}
           />
         </label>
-        <button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : editingId ? 'Save changes' : 'Save rule'}
-        </button>
-        {editingId && (
-          <button type="button" onClick={resetForm}>
-            Cancel
-          </button>
-        )}
+        <div className={styles.formActions}>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : editingId ? 'Save changes' : 'Save rule'}
+          </Button>
+          {editingId && (
+            <Button type="button" variant="secondary" onClick={resetForm}>
+              Cancel
+            </Button>
+          )}
+        </div>
       </form>
 
       {/* Always rendered so screen readers announce the message when it appears */}
@@ -206,9 +216,9 @@ function RuleForm() {
         </p>
       ) : loadFailed ? (
         <div className={styles.status}>
-          <button type="button" onClick={retryLoad}>
+          <Button type="button" size="sm" variant="secondary" onClick={retryLoad}>
             Retry
-          </button>
+          </Button>
         </div>
       ) : rules.length === 0 ? (
         <p className={styles.status}>No rules yet. Add a rule to set when tasks can be placed.</p>
@@ -221,16 +231,18 @@ function RuleForm() {
                 Nothing before {rule.notBefore}, nothing after {rule.notAfter}
               </span>
               <span className={styles.actions}>
-                <button type="button" onClick={() => startEdit(rule)}>
+                <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(rule)}>
                   Edit
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="secondary"
                   disabled={deletingIds.includes(rule._id)}
                   onClick={() => handleDelete(rule._id)}
                 >
                   {deletingIds.includes(rule._id) ? 'Deleting…' : 'Delete'}
-                </button>
+                </Button>
               </span>
             </li>
           ))}

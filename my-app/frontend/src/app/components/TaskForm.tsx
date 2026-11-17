@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import { readErrorMessage } from './apiErrors.ts'
 import { placedFormat, scheduledTasks, skipMessage } from './tasks.ts'
+import Button from './ui/Button.tsx'
 import { toIsoDate } from './week.ts'
 import styles from './TaskForm.module.css'
 
@@ -313,7 +314,10 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
 
   return (
     <aside className={styles.panel}>
-      <h2>{editingId ? 'Edit task' : 'Add a task'}</h2>
+      <div>
+        <h2>{editingId ? 'Edit task' : 'Add a task'}</h2>
+        <p className={styles.lead}>Place a task when you want it on the calendar.</p>
+      </div>
       <form className={styles.form} onSubmit={handleSubmit}>
         <label>
           Title
@@ -349,13 +353,13 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
             onChange={(e) => setTodoText(e.target.value)}
           />
         </label>
-        <button type="submit" disabled={saving}>
+        <Button type="submit" disabled={saving}>
           {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add task'}
-        </button>
+        </Button>
         {editingId && (
-          <button type="button" className={styles.secondary} onClick={resetForm}>
+          <Button type="button" variant="secondary" onClick={resetForm}>
             Cancel
-          </button>
+          </Button>
         )}
       </form>
 
@@ -380,9 +384,9 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
       ) : loadState === 'failed' ? (
         <div className={styles.empty}>
           <p role="alert">Tasks couldn’t be loaded.</p>
-          <button type="button" className={styles.retry} onClick={retryLoad}>
+          <Button type="button" size="sm" variant="secondary" onClick={retryLoad}>
             Retry
-          </button>
+          </Button>
         </div>
       ) : unscheduled.length === 0 ? (
         <p className={styles.empty}>No tasks yet.</p>
@@ -402,24 +406,26 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
                 </p>
               )}
               <div className={styles.cardActions}>
-                <button
+                <Button
                   type="button"
-                  className={styles.place}
+                  size="sm"
                   disabled={placingIds.includes(task._id)}
                   onClick={() => handlePlace(task._id)}
                 >
                   {placingIds.includes(task._id) ? 'Placing…' : 'Place'}
-                </button>
-                <button type="button" onClick={() => startEdit(task)}>
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(task)}>
                   Edit
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="secondary"
                   disabled={deletingIds.includes(task._id)}
                   onClick={() => handleDelete(task._id)}
                 >
                   {deletingIds.includes(task._id) ? 'Deleting…' : 'Delete'}
-                </button>
+                </Button>
               </div>
             </li>
           ))}
@@ -443,23 +449,27 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
                   </p>
                 )}
                 <div className={styles.cardActions}>
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
+                    variant="secondary"
                     disabled={skippingIds.includes(task._id)}
                     onClick={() => handleSkip(task._id)}
                   >
                     {skippingIds.includes(task._id) ? 'Skipping…' : 'Skip'}
-                  </button>
-                  <button type="button" onClick={() => startEdit(task)}>
+                  </Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(task)}>
                     Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    size="sm"
+                    variant="secondary"
                     disabled={deletingIds.includes(task._id)}
                     onClick={() => handleDelete(task._id)}
                   >
                     {deletingIds.includes(task._id) ? 'Deleting…' : 'Delete'}
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}

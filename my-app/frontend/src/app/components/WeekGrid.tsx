@@ -142,7 +142,7 @@ function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
             ),
           )}
         </div>
-        {days.map((day, dayIndex) => {
+        {days.map((day) => {
           const isToday = isSameDay(day, now)
           const selected = isSameDay(day, visibleDay)
           const className = [
@@ -155,7 +155,7 @@ function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
           return (
             <div
               key={day.toISOString()}
-              ref={dayIndex === 0 ? columnRef : undefined}
+              ref={selected ? columnRef : undefined}
               className={className}
             >
               {HOURS.map((hour) => (

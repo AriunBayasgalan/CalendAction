@@ -5,12 +5,24 @@
   --gutter-width: 64px;
 
   flex: 1;
-  /* Lets the grid shrink and scroll sideways when it shares a row with the task panel. */
+  /* Lets the grid shrink and scroll sideways when it shares a row with the task panel.
+     min-height: 0 lets a column layout honor the height below instead of growing to all 24 hours. */
   min-width: 0;
+  min-height: 0;
   /* Fill the window below the header and week controls, but never collapse. */
-  height: max(420px, calc(100svh - 190px));
+  height: max(420px, calc(100svh - 210px));
   overflow: auto;
   overscroll-behavior: contain;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  /* In a column layout, flex: 1 ignores height. Keep a window and scroll the hours. */
+  @media (max-width: 900px) {
+    flex: none;
+    width: 100%;
+    height: max(360px, calc(100svh - 250px));
+  }
 }
 
 .grid {
@@ -52,8 +64,21 @@
 
 .weekday,
 .date {
-  font-size: 20px;
-  font-weight: 300;
+  display: block;
+}
+
+.weekday {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.date {
+  margin-top: 2px;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text-h);
 }
 
 .dayHeader.today {
@@ -61,9 +86,8 @@
   /* Opaque, so hours scrolling under the sticky header don't show through */
   background: linear-gradient(var(--accent-bg), var(--accent-bg)), var(--bg);
 
-  .weekday,
   .date {
-    font-weight: 600;
+    color: var(--accent);
   }
 }
 
@@ -275,7 +299,6 @@
     display: none;
   }
 
-  .weekday,
   .date {
     font-size: 16px;
   }

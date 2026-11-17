@@ -9,10 +9,11 @@ import NagBanner from '../components/NagBanner.tsx'
 import TaskForm, { type Task, type TaskNotice } from '../components/TaskForm.tsx'
 import type { CalendarEvent, EventSaveResult } from '../components/events.ts'
 import { placedFormat } from '../components/tasks.ts'
+import Button from '../components/ui/Button.tsx'
 import WeekGrid from '../components/WeekGrid.tsx'
 import WeekHeader from '../components/WeekHeader.tsx'
 import { useNow } from '../components/useNow.ts'
-import { addWeeks, isSameDay, startOfWeek, toIsoDate } from '../components/week.ts'
+import { addWeeks, formatWeekRange, isSameDay, startOfWeek, toIsoDate } from '../components/week.ts'
 import styles from './WeekPage.module.css'
 
 type LoadStatus = 'loading' | 'error' | 'ready'
@@ -137,6 +138,10 @@ function WeekPage() {
     return () => controller.abort()
   }, [apiFetch, logout, weekStart, requestKey])
 
+  useEffect(() => {
+    document.title = `${formatWeekRange(weekStart)} · CalendAction`
+  }, [weekStart])
+
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(now))
   const weekEnd = addWeeks(weekStart, 1)
   const weekIsEmpty =
@@ -171,20 +176,21 @@ function WeekPage() {
       {status === 'error' && (
         <div role="alert" className={`${styles.notice} ${styles.error}`}>
           <span>Could not load your events. The grid below may be missing some.</span>
-          <button type="button" onClick={() => setAttempt((n) => n + 1)}>
+          <Button type="button" size="sm" variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
       {weekIsEmpty && (
         <div role="status" className={styles.emptyWeek}>
           <p>This week is empty. Add a class to put something on the grid.</p>
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={() => document.querySelector<HTMLButtonElement>('[data-add-class]')?.click()}
           >
             Add class
-          </button>
+          </Button>
         </div>
       )}
       <div className={styles.body}>
@@ -205,7 +211,8 @@ function WeekPage() {
         }}
         onAddTask={() => {
           const input = document.querySelector<HTMLInputElement>('[data-task-title]')
-          input?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          const motion = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+          input?.scrollIntoView({ behavior: motion, block: 'center' })
           input?.focus({ preventScroll: true })
         }}
       />
