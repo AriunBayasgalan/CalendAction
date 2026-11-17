@@ -28,3 +28,37 @@
 .error {
   color: #d33;
 }
+
+.emptyWeek {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 14px;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+}

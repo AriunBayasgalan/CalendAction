@@ -137,6 +137,11 @@ function WeekPage() {
   }, [apiFetch, logout, weekStart, requestKey])
 
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(now))
+  const weekEnd = addWeeks(weekStart, 1)
+  const weekIsEmpty =
+    status === 'ready' &&
+    result.events.length === 0 &&
+    !taskBlocks.some((block) => new Date(block.start) < weekEnd && new Date(block.end) > weekStart)
 
   return (
     <div className={styles.page}>
@@ -166,6 +171,17 @@ function WeekPage() {
           <span>Could not load your events. The grid below may be missing some.</span>
           <button type="button" onClick={() => setAttempt((n) => n + 1)}>
             Retry
+          </button>
+        </div>
+      )}
+      {weekIsEmpty && (
+        <div role="status" className={styles.emptyWeek}>
+          <p>This week is empty. Add a class to put something on the grid.</p>
+          <button
+            type="button"
+            onClick={() => document.querySelector<HTMLButtonElement>('[data-add-class]')?.click()}
+          >
+            Add class
           </button>
         </div>
       )}
