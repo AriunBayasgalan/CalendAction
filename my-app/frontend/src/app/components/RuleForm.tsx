@@ -15,6 +15,8 @@ function RuleForm() {
   const { apiFetch, logout } = useAuth()
   const [rules, setRules] = useState<Rule[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [saving, setSaving] = useState(false)
   const [deletingIds, setDeletingIds] = useState<string[]>([])
   const [notBefore, setNotBefore] = useState('09:00')
@@ -23,6 +25,13 @@ function RuleForm() {
   const [error, setError] = useState('')
   // The rule loaded into the form for editing; null means the form adds a new rule
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  function retryLoad() {
+    setError('')
+    setLoadFailed(false)
+    setLoading(true)
+    setLoadAttempt((n) => n + 1)
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -37,13 +46,19 @@ function RuleForm() {
         }
 
         if (!res.ok) {
+          setLoadFailed(true)
           setError(await readErrorMessage(res, 'Could not load rules.'))
           return
         }
 
+        setLoadFailed(false)
+        setError('')
         setRules(await res.json())
       } catch {
-        if (!controller.signal.aborted) setError('Could not load rules.')
+        if (!controller.signal.aborted) {
+          setLoadFailed(true)
+          setError('Could not load rules.')
+        }
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }
@@ -52,7 +67,7 @@ function RuleForm() {
     loadRules()
 
     return () => controller.abort()
-  }, [apiFetch, logout])
+  }, [apiFetch, logout, loadAttempt])
 
   function startEdit(rule: Rule) {
     setError('')
@@ -189,8 +204,14 @@ function RuleForm() {
         <p role="status" aria-live="polite" className={styles.status}>
           Loading rules…
         </p>
+      ) : loadFailed ? (
+        <div className={styles.status}>
+          <button type="button" onClick={retryLoad}>
+            Retry
+          </button>
+        </div>
       ) : rules.length === 0 ? (
-        <p className={styles.status}>No rules yet</p>
+        <p className={styles.status}>No rules yet. Add a rule to set when tasks can be placed.</p>
       ) : (
         <ul className={styles.list}>
           {rules.map((rule) => (

@@ -110,7 +110,7 @@ function AddClassDialog({ defaultDate, onCreated }: AddClassDialogProps) {
         <p className={styles.status} role="status">
           {status}
         </p>
-        <button type="button" className={styles.primary} onClick={open}>
+        <button type="button" className={styles.primary} data-add-class onClick={open}>
           Add class
         </button>
       </div>
