@@ -3,13 +3,14 @@ import { useAuth } from '../../contexts/auth.ts'
 import AddClassDialog from '../components/AddClassDialog.tsx'
 import EditEventDialog from '../components/EditEventDialog.tsx'
 import EventPanel from '../components/EventPanel.tsx'
+import StreakBadge from '../components/StreakBadge.tsx'
 import TaskForm, { type Task, type TaskNotice } from '../components/TaskForm.tsx'
 import type { CalendarEvent, EventSaveResult } from '../components/events.ts'
 import { placedFormat } from '../components/tasks.ts'
 import WeekGrid from '../components/WeekGrid.tsx'
 import WeekHeader from '../components/WeekHeader.tsx'
 import { useNow } from '../components/useNow.ts'
-import { addWeeks, isSameDay, startOfWeek } from '../components/week.ts'
+import { addWeeks, isSameDay, startOfWeek, toIsoDate } from '../components/week.ts'
 import styles from './WeekPage.module.css'
 
 type LoadStatus = 'loading' | 'error' | 'ready'
@@ -35,6 +36,8 @@ function WeekPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [taskReload, setTaskReload] = useState(0)
   const [taskNotices, setTaskNotices] = useState<TaskNotice[]>([])
+  // Bumped after a Start so the streak badge reloads (CA-28)
+  const [streakReload, setStreakReload] = useState(0)
   const taskBlocks: CalendarEvent[] = tasks.flatMap((task) =>
     task.status === 'scheduled' && task.start && task.end
       ? [
@@ -74,6 +77,7 @@ function WeekPage() {
   // Start in the panel succeeded (CA-25): show it in the open panel and in the block's source
   function handleStarted(block: CalendarEvent) {
     setSelected((open) => (open?._id === block._id ? block : open))
+    setStreakReload((n) => n + 1)
     if (block.isTask) {
       // TaskForm owns the task list, so reload it to pick up the task's startedAt
       setTaskNotices([])
@@ -132,10 +136,13 @@ function WeekPage() {
         onNext={() => setWeekStart((week) => addWeeks(week, 1))}
         onToday={() => setWeekStart(startOfWeek(new Date()))}
         actions={
-          <AddClassDialog
-            defaultDate={isCurrentWeek ? now : weekStart}
-            onCreated={handleEventSaved}
-          />
+          <>
+            <StreakBadge reloadToken={streakReload} today={toIsoDate(now)} />
+            <AddClassDialog
+              defaultDate={isCurrentWeek ? now : weekStart}
+              onCreated={handleEventSaved}
+            />
+          </>
         }
       />
       {status === 'loading' && (
