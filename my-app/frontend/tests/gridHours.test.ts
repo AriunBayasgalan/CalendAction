@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { layoutDay, type CalendarEvent } from '../src/app/components/events.ts'
-import { GRID_END_HOUR, GRID_START_HOUR, HOURS, SCROLL_TO_HOUR } from '../src/app/components/week.ts'
+import { GRID_END_HOUR, GRID_START_HOUR, HOURS, SCROLL_TO_HOUR, pickVisibleDay, startOfWeek } from '../src/app/components/week.ts'
 
 const day = new Date(2026, 10, 17) // local midnight, Tue Nov 17 2026
 
@@ -43,4 +43,17 @@ test('a zero-minute marker at 5 AM is drawn', () => {
   assert.ok(placed)
   assert.equal(placed.instant, true)
   assert.equal(placed.top, 5 / 24)
+})
+
+test('pickVisibleDay uses today when it is in the week, otherwise Monday', () => {
+  const tuesday = new Date(2026, 10, 17) // Tue Nov 17 2026
+  const weekStart = startOfWeek(tuesday)
+  const visible = pickVisibleDay(weekStart, tuesday)
+  assert.equal(visible.getFullYear(), 2026)
+  assert.equal(visible.getMonth(), 10)
+  assert.equal(visible.getDate(), 17)
+
+  const laterNow = new Date(2026, 10, 30)
+  const monday = pickVisibleDay(weekStart, laterNow)
+  assert.equal(monday.getDate(), 16) // Mon Nov 16
 })

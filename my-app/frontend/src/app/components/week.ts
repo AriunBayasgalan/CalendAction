@@ -91,3 +91,12 @@ export function formatWeekRange(weekStart: Date) {
   }
   return `${monthDayFormat.format(weekStart)} – ${fullDateFormat.format(weekEnd)}`
 }
+
+// CA-31: at 480px and below the week shows one day at a time.
+export const NARROW_WEEK_QUERY = '(max-width: 480px)'
+
+// Today if it falls in this week, otherwise the week's Monday.
+export function pickVisibleDay(weekStart: Date, now: Date) {
+  const days = getWeekDays(weekStart)
+  return days.find((day) => isSameDay(day, now)) ?? days[0]
+}

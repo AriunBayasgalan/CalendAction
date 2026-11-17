@@ -1,15 +1,17 @@
-import { useLayoutEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { formatEventTime, layoutDay, type CalendarEvent } from './events.ts'
 import {
   GRID_END_HOUR,
   GRID_START_HOUR,
   HOURS,
+  NARROW_WEEK_QUERY,
   SCROLL_TO_HOUR,
   formatFullDate,
   formatHour,
   formatWeekday,
   getWeekDays,
   isSameDay,
+  pickVisibleDay,
   toIsoDate,
 } from './week.ts'
 import styles from './WeekGrid.module.css'
@@ -21,11 +23,41 @@ type WeekGridProps = {
   onSelectEvent: (event: CalendarEvent) => void
 }
 
+
+function useNarrowWeek() {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' && 'matchMedia' in window
+      ? window.matchMedia(NARROW_WEEK_QUERY).matches
+      : false,
+  )
+
+  useEffect(() => {
+    const media = window.matchMedia(NARROW_WEEK_QUERY)
+    const onChange = () => setNarrow(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  return narrow
+}
+
 // Pixels kept above the 7 AM line when the grid opens
 const LABEL_ROOM = 12
 
 function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
   const days = getWeekDays(weekStart)
+  const narrow = useNarrowWeek()
+  const [visibleDay, setVisibleDay] = useState(() => pickVisibleDay(weekStart, now))
+  const weekKey = toIsoDate(weekStart)
+
+  // Changing weeks resets the visible day to today (or Monday).
+  const [seenWeek, setSeenWeek] = useState(weekKey)
+  if (seenWeek !== weekKey) {
+    setSeenWeek(weekKey)
+    setVisibleDay(pickVisibleDay(weekStart, now))
+  }
+
   const nowHours = now.getHours() + now.getMinutes() / 60
   const showNowLine = nowHours >= GRID_START_HOUR && nowHours <= GRID_END_HOUR
   const scrollerRef = useRef<HTMLElement>(null)
@@ -48,18 +80,44 @@ function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
   return (
     <section
       ref={scrollerRef}
-      className={styles.scroller}
+      className={narrow ? `${styles.scroller} ${styles.narrow}` : styles.scroller}
       style={{ '--hour-count': HOURS.length } as CSSProperties}
       aria-label={`Week of ${formatFullDate(weekStart)}`}
     >
+      <div className={styles.dayTabs} role="tablist" aria-label="Choose a day">
+        {days.map((day) => {
+          const selected = isSameDay(day, visibleDay)
+          return (
+            <button
+              key={day.toISOString()}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              className={selected ? `${styles.dayTab} ${styles.dayTabSelected}` : styles.dayTab}
+              onClick={() => setVisibleDay(day)}
+            >
+              <span className={styles.tabWeekday}>{formatWeekday(day)}</span>
+              <span className={styles.tabDate}>{day.getDate()}</span>
+            </button>
+          )
+        })}
+      </div>
       <div className={styles.grid}>
         <div className={styles.corner} />
         {days.map((day) => {
           const isToday = isSameDay(day, now)
+          const selected = isSameDay(day, visibleDay)
+          const className = [
+            styles.dayHeader,
+            isToday ? styles.today : '',
+            selected ? styles.selected : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
           return (
             <div
               key={day.toISOString()}
-              className={isToday ? `${styles.dayHeader} ${styles.today}` : styles.dayHeader}
+              className={className}
               aria-current={isToday ? 'date' : undefined}
             >
               <time dateTime={toIsoDate(day)}>
@@ -86,11 +144,19 @@ function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
         </div>
         {days.map((day, dayIndex) => {
           const isToday = isSameDay(day, now)
+          const selected = isSameDay(day, visibleDay)
+          const className = [
+            styles.dayColumn,
+            isToday ? styles.today : '',
+            selected ? styles.selected : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
           return (
             <div
               key={day.toISOString()}
               ref={dayIndex === 0 ? columnRef : undefined}
-              className={isToday ? `${styles.dayColumn} ${styles.today}` : styles.dayColumn}
+              className={className}
             >
               {HOURS.map((hour) => (
                 <div key={hour} className={styles.hourCell} />
