@@ -3,9 +3,9 @@
 CalendAction is a week planner for students. It places tasks into free holes
 around classes, with rules for when work can happen, a streak, and a mascot.
 
-- **Web (production):** https://calend-action.vercel.app/
-- **API (production):** https://calendaction.onrender.com/
-- **API health:** https://calendaction.onrender.com/health
+- **Web (production):** https://calendaction-web.vercel.app/
+- **API (production):** https://calendaction-api.onrender.com/
+- **API health:** https://calendaction-api.onrender.com/health
 
 Feature freeze: after **20 November 2026**, only bugfix PRs may land on `main`.
 See [docs/FREEZE.md](docs/FREEZE.md).
