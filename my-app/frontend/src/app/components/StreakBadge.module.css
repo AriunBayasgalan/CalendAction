@@ -1,0 +1,16 @@
+/* Same pill shape as the header's Today button, but not a control */
+.badge {
+  margin: 0;
+  padding: 6px 14px;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+/* Today already counts */
+.counted {
+  color: var(--accent);
+  border-color: var(--accent);
+}

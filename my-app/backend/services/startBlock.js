@@ -1,3 +1,4 @@
+import { countStart } from './streak.js';
 import { dayContaining } from './timeZone.js';
 
 export const NOT_ITS_DAY = 'A block can only be started on its own day';
@@ -16,6 +17,7 @@ export function isOnDay(block, day) {
 //   (CA-28) can't be filled in ahead of time or a missed day made up afterwards.
 // - A start belongs to one time slot. Moving the block clears startedAt (see the Task
 //   model hooks and updateEvent).
+// - The first Start of a block counts toward the streak (CA-28, services/streak.js).
 // Returns { block } on success, or { status, error } for the caller to send.
 export async function markStarted(Model, block, timeZone, now = new Date()) {
     if (block.startedAt) return { block };
@@ -28,7 +30,15 @@ export async function markStarted(Model, block, timeZone, now = new Date()) {
         { $set: { startedAt: now } },
         { returnDocument: 'after' }
     );
-    if (started) return { block: started };
+    if (started) {
+        try {
+            await countStart(block.owner, timeZone, now);
+        } catch (error) {
+            // The block is started either way; a failed streak update shouldn't report a failed Start
+            console.error('countStart', error);
+        }
+        return { block: started };
+    }
 
     // Another request got there first: fine if it started the block, not if it moved it
     const current = await Model.findOne(filter);
