@@ -5,6 +5,7 @@ import { withOwnerLock } from '../services/ownerLock.js';
 import { sendValidationError } from '../services/apiErrors.js';
 import { todoDoneInput } from '../services/todoDone.js';
 import { hasValidId } from '../middleware/requireValidId.js';
+import { markStarted } from '../services/startBlock.js';
 import {
     MAX_SLOT_ATTEMPTS,
     NO_OPEN_TIME,
@@ -160,6 +161,20 @@ export const deleteTask = async (req, res) => {
     if (!task) return res.status(404).json({ error: 'Task not found' });
     await task.deleteOne();
     return res.status(204).end();
+};
+
+// START  POST /tasks/:id/start (CA-25)
+// Only a placed task has a block to start. The rules are in services/startBlock.js.
+export const startTask = async (req, res) => {
+    const timeZone = readTimeZone(req, res);
+    if (!timeZone) return;
+    const task = await findMyTask(req);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+    if (task.status !== 'scheduled') return res.status(400).json({ error: 'Task is not scheduled' });
+
+    const result = await markStarted(Task, task, timeZone);
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    return res.json(result.block);
 };
 
 export const placeTask = async (req, res) => {

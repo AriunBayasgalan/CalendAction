@@ -18,6 +18,8 @@ export type Task = {
   status: 'unscheduled' | 'scheduled'
   start?: string
   end?: string
+  // Set by Start in the event panel (CA-25)
+  startedAt?: string
 }
 
 // Same limits as the API (CA-10)

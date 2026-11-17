@@ -12,6 +12,8 @@ export type CalendarEvent = {
   isTask?: boolean
   // A placed task's to-do, exactly as typed in the task form
   todoText?: string
+  // When Start was pressed on this block (CA-25); missing until then
+  startedAt?: string
   // CA-24: indexes of the to-do lines (split on "\n") that are checked off
   todoDone?: number[]
 }
@@ -41,23 +43,37 @@ function hourOf(date: Date) {
   return date.getHours() + date.getMinutes() / 60
 }
 
+// Whether a block falls on `day` (local time). A zero-minute block belongs to the day it
+// happens on; others to every day they overlap. The backend's Start check uses the same
+// rule (backend/services/startBlock.js isOnDay).
+export function isOnDay(start: Date, end: Date, day: Date) {
+  const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate())
+  const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
+  return start < dayEnd && (end > dayStart || start >= dayStart)
+}
+
+// What the event panel's Start button can do for a block (CA-25). Start only works on the
+// block's own day: 'upcoming' blocks open later, 'missed' ones were never started.
+export type StartState = 'started' | 'ready' | 'upcoming' | 'missed'
+
+export function startState(block: CalendarEvent, now: Date): StartState {
+  if (block.startedAt) return 'started'
+  const start = new Date(block.start)
+  if (isOnDay(start, new Date(block.end), now)) return 'ready'
+  return start > now ? 'upcoming' : 'missed'
+}
+
 // Events that overlap `day` (so multi-day events show on every day they cover), clipped to
 // the drawn hours and split into lanes so overlapping events stay visible.
 export function layoutDay(events: CalendarEvent[], day: Date) {
   const placed: PlacedEvent[] = []
-  const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate())
-  const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
 
   for (const event of events) {
     const start = new Date(event.start)
     const end = new Date(event.end)
     const instant = start.getTime() === end.getTime()
 
-    // A zero-minute event belongs to the day it happens on; others to every day they overlap.
-    const onDay = instant
-      ? start >= dayStart && start < dayEnd
-      : start < dayEnd && end > dayStart
-    if (!onDay) continue
+    if (!isOnDay(start, end, day)) continue
 
     const from = Math.max(isSameDay(start, day) ? hourOf(start) : 0, GRID_START_HOUR)
     const to = isSameDay(end, day) ? Math.min(hourOf(end), GRID_END_HOUR) : GRID_END_HOUR

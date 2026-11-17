@@ -46,6 +46,7 @@ function WeekPage() {
             end: task.end,
             isTask: true,
             todoText: task.todoText,
+            startedAt: task.startedAt,
             todoDone: task.todoDone,
           },
         ]
@@ -79,6 +80,21 @@ function WeekPage() {
       })),
     ]
     setTaskNotices(notices)
+  }
+
+  // Start in the panel succeeded (CA-25): show it in the open panel and in the block's source
+  function handleStarted(block: CalendarEvent) {
+    setSelected((open) => (open?._id === block._id ? block : open))
+    if (block.isTask) {
+      // TaskForm owns the task list, so reload it to pick up the task's startedAt
+      setTaskNotices([])
+      setTaskReload((n) => n + 1)
+    } else {
+      setResult((current) => ({
+        ...current,
+        events: current.events.map((event) => (event._id === block._id ? block : event)),
+      }))
+    }
   }
 
   // Fetch only the selected week and refetch when it changes. The cleanup aborts the
@@ -170,7 +186,9 @@ function WeekPage() {
       />
       <EventPanel
         event={selected}
+        now={now}
         onClose={() => setSelected(null)}
+        onStarted={handleStarted}
         onTodoSaved={(event, todo, done) =>
           setTodoChecks((prev) => ({ ...prev, [event._id]: { todo, done } }))
         }
