@@ -12,6 +12,8 @@ export type Task = {
   durationMinutes: number
   dueDate?: string
   todoText: string
+  // CA-24: checked-off to-do line indexes
+  todoDone?: number[]
   // #51 adds 'scheduled' (with start and end)
   status: 'unscheduled' | 'scheduled'
   start?: string
@@ -308,6 +310,7 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
           Title
           <input
             value={title}
+            data-task-title
             maxLength={TITLE_MAX}
             onChange={(e) => setTitle(e.target.value)}
             required

@@ -24,12 +24,93 @@ type EventPanelProps = {
   onStarted: (event: CalendarEvent) => void
   // Classes only: hand the event to the edit dialog.
   onEdit: (event: CalendarEvent) => void
+  // CA-24: a check-off was saved; `todo` is the text the line numbers refer to.
+  onTodoSaved: (event: CalendarEvent, todo: string, done: number[]) => void
+}
+
+type TodoChecklistProps = {
+  event: CalendarEvent
+  todo: string
+  onSaved: (done: number[]) => void
+}
+
+// CA-24: one checkbox per non-blank line of the to-do. Each click saves right away
+// (PATCH todoDone), so checks survive a refresh. On failure the click is undone.
+function TodoChecklist({ event, todo, onSaved }: TodoChecklistProps) {
+  const { apiFetch, logout } = useAuth()
+  const [done, setDone] = useState<number[]>(event.todoDone ?? [])
+  const [error, setError] = useState('')
+
+  // Line numbers count every line, blank ones too, so they match the stored text
+  const items = todo
+    .split('\n')
+    .map((text, line) => ({ text, line }))
+    .filter((item) => item.text.trim() !== '')
+  const doneCount = items.filter((item) => done.includes(item.line)).length
+
+  async function toggle(line: number) {
+    const before = done
+    const next = done.includes(line)
+      ? done.filter((n) => n !== line)
+      : [...done, line].sort((a, b) => a - b)
+    setDone(next)
+    setError('')
+
+    try {
+      const path = event.isTask ? `/tasks/${event._id}` : `/events/${event._id}`
+      const res = await apiFetch(path, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ todoDone: next }),
+      })
+      if (res.status === 401) {
+        logout()
+        return
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      onSaved(next)
+    } catch (err) {
+      console.error('Could not save the check-off:', err)
+      setDone(before)
+      setError("Couldn't save that. Try again.")
+    }
+  }
+
+  if (items.length === 0) return <dd className={styles.empty}>No to-do written.</dd>
+
+  return (
+    <dd>
+      <p className={styles.progress}>
+        {doneCount} of {items.length} done
+      </p>
+      <ul className={styles.checklist}>
+        {items.map(({ text, line }) => {
+          const checked = done.includes(line)
+          return (
+            <li key={line}>
+              <label className={styles.item}>
+                <input type="checkbox" checked={checked} onChange={() => toggle(line)} />
+                <span className={checked ? `${styles.todo} ${styles.checked}` : styles.todo}>
+                  {text}
+                </span>
+              </label>
+            </li>
+          )
+        })}
+      </ul>
+      {error && (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      )}
+    </dd>
+  )
 }
 
 // Details for a block on the week grid: title, time, and the to-do the user wrote when
 // creating it. Start marks the block started (the streak counts it), but only on the
 // block's own day; Close returns to the week.
-function EventPanel({ event, now, onClose, onStarted, onEdit }: EventPanelProps) {
+function EventPanel({ event, now, onClose, onStarted, onEdit, onTodoSaved }: EventPanelProps) {
   const { apiFetch, logout } = useAuth()
   const dialogRef = useRef<HTMLDialogElement>(null)
   // The block whose Start request is in flight
@@ -126,11 +207,13 @@ function EventPanel({ event, now, onClose, onStarted, onEdit }: EventPanelProps)
             </>
           )}
           <dt>To-do</dt>
-          {todo.trim() ? (
-            <dd className={styles.todo}>{todo}</dd>
-          ) : (
-            <dd className={styles.empty}>No to-do written.</dd>
-          )}
+          {/* key: a different block (or new to-do text) starts from its own saved checks */}
+          <TodoChecklist
+            key={`${event._id}:${todo}`}
+            event={event}
+            todo={todo}
+            onSaved={(done) => onTodoSaved(event, todo, done)}
+          />
         </dl>
 
         {startError?.id === event._id && (

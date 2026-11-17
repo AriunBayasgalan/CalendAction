@@ -238,3 +238,45 @@ describe('scheduled tasks displaced by an event', () => {
     assert.notEqual(saved.start.toISOString(), slot.ten);
   });
 });
+
+describe('class to-do check-off (CA-24)', () => {
+  async function classWithNotes(extra = {}) {
+    const created = await Event.create({
+      owner: userA,
+      title: 'CS 2340',
+      start: at(slot.nine),
+      end: at(slot.ten),
+      notes: 'Bring laptop\nReview slides',
+      ...extra,
+    });
+    return created._id.toString();
+  }
+
+  test('checked lines are saved and come back on the next load', async () => {
+    const id = await classWithNotes();
+    const res = await call('PATCH', `/events/${id}`, { user: userA, body: { todoDone: [1] } });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.json.todoDone, [1]);
+
+    const list = await call('GET', '/events', { user: userA });
+    assert.deepEqual(list.json[0].todoDone, [1]);
+  });
+
+  test('unchecking works', async () => {
+    const id = await classWithNotes({ todoDone: [0, 1] });
+    const res = await call('PATCH', `/events/${id}`, { user: userA, body: { todoDone: [] } });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.json.todoDone, []);
+  });
+
+  test('new notes clear the checks; same notes keep them', async () => {
+    const id = await classWithNotes({ todoDone: [0] });
+    const same = await call('PATCH', `/events/${id}`, {
+      user: userA,
+      body: { notes: 'Bring laptop\nReview slides' },
+    });
+    assert.deepEqual(same.json.todoDone, [0]);
+    const changed = await call('PATCH', `/events/${id}`, { user: userA, body: { notes: 'New plan' } });
+    assert.deepEqual(changed.json.todoDone, []);
+  });
+});

@@ -8,6 +8,8 @@ const taskSchema = new mongoose.Schema(
         dueDate: { type: Date },
         notes: { type: String, default: '', maxlength: 2000 },
         todoText: { type: String, default: '', maxlength: 2000 },
+        // CA-24: indexes of the todoText lines the user checked off (split on "\n")
+        todoDone: { type: [Number], default: [] },
         status: { type: String, enum: ['unscheduled', 'scheduled'], default: 'unscheduled' },
         start: { type: Date },
         end: { type: Date },

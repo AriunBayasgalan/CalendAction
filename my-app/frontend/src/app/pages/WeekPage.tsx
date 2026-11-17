@@ -4,6 +4,7 @@ import AddClassDialog from '../components/AddClassDialog.tsx'
 import EditEventDialog from '../components/EditEventDialog.tsx'
 import EventPanel from '../components/EventPanel.tsx'
 import StreakBadge from '../components/StreakBadge.tsx'
+import Mascot from '../components/Mascot.tsx'
 import TaskForm, { type Task, type TaskNotice } from '../components/TaskForm.tsx'
 import type { CalendarEvent, EventSaveResult } from '../components/events.ts'
 import { placedFormat } from '../components/tasks.ts'
@@ -49,10 +50,20 @@ function WeekPage() {
             isTask: true,
             todoText: task.todoText,
             startedAt: task.startedAt,
+            todoDone: task.todoDone,
           },
         ]
       : [],
   )
+
+  // CA-24: check-offs saved from the panel, so the grid's copy stays current without a
+  // reload. An entry only applies while the to-do text it was saved for is unchanged.
+  const [todoChecks, setTodoChecks] = useState<Record<string, { todo: string; done: number[] }>>({})
+  function withChecks(event: CalendarEvent): CalendarEvent {
+    const saved = todoChecks[event._id]
+    const todo = (event.isTask ? event.todoText : event.notes) ?? ''
+    return saved && saved.todo === todo ? { ...event, todoDone: saved.done } : event
+  }
 
   function handleEventSaved(result?: EventSaveResult) {
     setAttempt((n) => n + 1)
@@ -162,16 +173,32 @@ function WeekPage() {
         <WeekGrid
           weekStart={weekStart}
           now={now}
-          events={[...result.events, ...taskBlocks]}
+          events={[...result.events, ...taskBlocks].map(withChecks)}
           onSelectEvent={setSelected}
         />
         <TaskForm onTasksChange={setTasks} reloadToken={taskReload} extraNotices={taskNotices} />
       </div>
+      <Mascot
+        taskBlocks={taskBlocks}
+        onOpenBlock={(block) => {
+          // Jump to the block's week, then open it in the event panel (CA-23)
+          setWeekStart(startOfWeek(new Date(block.start)))
+          setSelected(withChecks(block))
+        }}
+        onAddTask={() => {
+          const input = document.querySelector<HTMLInputElement>('[data-task-title]')
+          input?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          input?.focus({ preventScroll: true })
+        }}
+      />
       <EventPanel
         event={selected}
         now={now}
         onClose={() => setSelected(null)}
         onStarted={handleStarted}
+        onTodoSaved={(event, todo, done) =>
+          setTodoChecks((prev) => ({ ...prev, [event._id]: { todo, done } }))
+        }
         onEdit={(event) => {
           setSelected(null)
           setEditing(event)

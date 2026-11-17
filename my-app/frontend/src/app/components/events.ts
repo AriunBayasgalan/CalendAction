@@ -14,6 +14,8 @@ export type CalendarEvent = {
   todoText?: string
   // When Start was pressed on this block (CA-25); missing until then
   startedAt?: string
+  // CA-24: indexes of the to-do lines (split on "\n") that are checked off
+  todoDone?: number[]
 }
 
 export type PlacedEvent = {
