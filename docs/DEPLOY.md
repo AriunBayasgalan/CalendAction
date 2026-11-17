@@ -6,9 +6,9 @@ deploy; someone with access to those hosts has to apply the steps below.
 
 ## Current production URLs
 
-- Web: https://calend-action.vercel.app/
-- API: https://calendaction.onrender.com/
-- API health: https://calendaction.onrender.com/health (should return 200)
+- Web: https://calendaction-web.vercel.app/
+- API: https://calendaction-api.onrender.com/
+- API health: https://calendaction-api.onrender.com/health (should return 200)
 
 These URLs may still be running an older build until `main` is redeployed.
 After a redeploy, run the demo seed (CA-32) against the production database
@@ -26,7 +26,7 @@ Root directory: `my-app/backend`. Build: `npm ci`. Start: `npm start`
 | `PORT` | Set by the host, or `10000` |
 | `MONGODB_URI` | Atlas connection string, including the database name (for example `...mongodb.net/calendaction?retryWrites=true&w=majority`) |
 | `JWT_SECRET` | A long random string. Changing it signs everyone out. |
-| `CLIENT_ORIGIN` | The production web origin, for example `https://calend-action.vercel.app`. Comma-separate more than one, including `http://localhost:5173` if you want local dev to hit this API. |
+| `CLIENT_ORIGIN` | The production web origin, for example `https://calendaction-web.vercel.app`. Comma-separate more than one, including `http://localhost:5173` if you want local dev to hit this API. |
 | `DEFAULT_TIMEZONE` | `America/New_York` |
 
 Atlas must allow the host's outbound IPs (or `0.0.0.0/0` for a demo).
@@ -38,7 +38,7 @@ Root directory: `my-app/frontend`. Build: `npm ci && npm run build`. Output: `di
 
 | Variable | Value |
 | --- | --- |
-| `VITE_API_URL` | The production API origin, for example `https://calendaction.onrender.com` (no trailing slash). This is baked in at **build** time, so change it and rebuild, not just restart. |
+| `VITE_API_URL` | The production API origin, for example `https://calendaction-api.onrender.com` (no trailing slash). This is baked in at **build** time, so change it and rebuild, not just restart. |
 
 ## After each production deploy
 
