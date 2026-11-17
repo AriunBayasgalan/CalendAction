@@ -110,7 +110,7 @@ function TodoChecklist({ event, todo, onSaved }: TodoChecklistProps) {
 // Details for a block on the week grid: title, time, and the to-do the user wrote when
 // creating it. Start marks the block started (the streak counts it), but only on the
 // block's own day; Close returns to the week.
-function EventPanel({ event, now, onClose, onStarted, onEdit }: EventPanelProps) {
+function EventPanel({ event, now, onClose, onStarted, onEdit, onTodoSaved }: EventPanelProps) {
   const { apiFetch, logout } = useAuth()
   const dialogRef = useRef<HTMLDialogElement>(null)
   // The block whose Start request is in flight
