@@ -177,3 +177,6 @@ $RECYCLE.BIN/
 .history/
 .vscode-test/
 .cursor/
+
+# Private demo login (CA-32). The example file is safe to commit.
+docs/demo-credentials.md
