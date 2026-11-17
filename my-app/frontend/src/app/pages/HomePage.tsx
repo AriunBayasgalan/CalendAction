@@ -7,11 +7,11 @@ import styles from './HomePage.module.css'
 const features = [
   {
     title: 'See the week',
-    body: 'Classes and placed tasks share one calendar, with today marked so the day is easy to scan.',
+    body: 'Events and placed tasks share one calendar, with today marked so the day is easy to scan.',
   },
   {
     title: 'Place a task',
-    body: 'Add what you need to do. Place finds the next open slot around the classes already on the grid.',
+    body: 'Add what you need to do. Place finds the next open slot around the events already on the grid.',
   },
   {
     title: 'Set your hours',
@@ -41,7 +41,7 @@ function HomePage() {
             Your week, with time left for the work.
           </h1>
           <p className={styles.lede}>
-            CalendAction puts classes on a calendar and places tasks in the open hours you allow.
+            CalendAction puts events on a calendar and places tasks in the open hours you allow.
             Start a block to keep a streak, and let the bird tell you what is next.
           </p>
           <div className={styles.actions}>

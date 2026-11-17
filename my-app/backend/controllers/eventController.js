@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import Event from '../models/Event.js';
 import { sendValidationError } from '../services/apiErrors.js';
@@ -11,6 +12,7 @@ import {
   findOverlappingEvent,
   overlapError,
 } from '../services/placement.js';
+import { weeklyOccurrences } from '../services/weeklyRepeat.js';
 
 export { fetchEvents };
 
@@ -26,7 +28,7 @@ const eventFields = z.object({
   end: dateValue,
   location: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(2000).optional(),
-  // CA-24: checked-off lines of notes (the class's to-do)
+  // CA-24: checked-off lines of notes (the event's to-do)
   todoDone: todoDoneInput.optional(),
 });
 
@@ -34,8 +36,20 @@ const eventFields = z.object({
 const endNotBeforeStart = (d) => !d.start || !d.end || d.end >= d.start;
 
 const createEventSchema = eventFields
+  .extend({
+    repeat: z.enum(['none', 'weekly']).optional(),
+    repeatUntil: z.iso.date().optional(),
+  })
   .strict() // rejects unknown keys, so a client can't send `owner`
-  .refine(endNotBeforeStart, { message: "End cannot be before start", path: ["end"] });
+  .refine(endNotBeforeStart, { message: "End cannot be before start", path: ["end"] })
+  .refine((data) => data.repeat !== 'weekly' || data.repeatUntil, {
+    message: 'Choose the last day this weekly event happens',
+    path: ['repeatUntil'],
+  })
+  .refine((data) => !data.repeatUntil || data.repeat === 'weekly', {
+    message: 'An end date is only for a weekly event',
+    path: ['repeatUntil'],
+  });
 
 const updateEventSchema = eventFields
   .partial()
@@ -70,12 +84,17 @@ const timeZoneOf = (req) => {
   return resolved.timeZone ?? defaultTimeZone();
 };
 
-function eventPayload(event, placements) {
+function eventPayload(event, placements, extra = {}) {
   return {
     ...event.toJSON(),
     moved: placements.moved,
     unscheduled: placements.unscheduled,
+    ...extra,
   };
+}
+
+function definedFields(data) {
+  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
 }
 
 
@@ -86,18 +105,61 @@ export async function createEvent(req, res) {
 
   const ownerId = req.user.id;
   const timeZone = timeZoneOf(req);
-  const { start, end } = parsed.data;
+  const { title, start, end, location, notes, todoDone, repeat, repeatUntil } = parsed.data;
+
+  let slots = [{ start, end }];
+  if (repeat === 'weekly') {
+    const expanded = weeklyOccurrences({ start, end, repeatUntil, timeZone });
+    if (expanded.error) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: [{ field: expanded.field, message: expanded.error }],
+      });
+    }
+    slots = expanded.occurrences;
+  }
 
   try {
     return await withOwnerLock(ownerId, async () => {
-      const clash = await findOverlappingEvent(ownerId, start, end);
-      if (clash) {
-        return res.status(409).json({ error: overlapError(clash, timeZone) });
+      for (const slot of slots) {
+        const clash = await findOverlappingEvent(ownerId, slot.start, slot.end);
+        if (clash) {
+          return res.status(409).json({ error: overlapError(clash, timeZone) });
+        }
       }
 
-      const event = await Event.create({ ...parsed.data, owner: ownerId });
-      const placements = await evictOverlappingTasks(ownerId, event, timeZone);
-      res.status(201).json(eventPayload(event, placements));
+      const seriesId = slots.length > 1 ? new mongoose.Types.ObjectId() : undefined;
+      const shared = definedFields({
+        title,
+        location,
+        notes,
+        todoDone,
+        owner: ownerId,
+        ...(seriesId ? { repeat: 'weekly', seriesId } : {}),
+      });
+
+      const created = [];
+      try {
+        for (const slot of slots) {
+          created.push(await Event.create({ ...shared, start: slot.start, end: slot.end }));
+        }
+      } catch (err) {
+        if (created.length > 0) {
+          await Event.deleteMany({ _id: { $in: created.map((event) => event._id) } });
+        }
+        throw err;
+      }
+
+      const moved = [];
+      const unscheduled = [];
+      for (const event of created) {
+        const placements = await evictOverlappingTasks(ownerId, event, timeZone);
+        moved.push(...placements.moved);
+        unscheduled.push(...placements.unscheduled);
+      }
+
+      const extra = created.length > 1 ? { repeated: created.length } : {};
+      res.status(201).json(eventPayload(created[0], { moved, unscheduled }, extra));
     });
   } catch (err) {
     serverError(res, err);
@@ -163,7 +225,7 @@ export async function updateEvent(req, res) {
     if (!timeChanged) {
       const updated = await Event.findOneAndUpdate(
         { _id: existing._id, owner: ownerId },
-        { $set: parsed.data },
+        { $set: definedFields(parsed.data) },
         { returnDocument: "after", runValidators: true }
       );
       if (!updated) return notFound(res);
@@ -179,7 +241,7 @@ export async function updateEvent(req, res) {
       const updated = await Event.findOneAndUpdate(
         { _id: existing._id, owner: ownerId },
         // A start belongs to one time slot (CA-25), so a new time clears it
-        { $set: parsed.data, $unset: { startedAt: '' } },
+        { $set: definedFields(parsed.data), $unset: { startedAt: '' } },
         { returnDocument: "after", runValidators: true }
         // returns updated object and validates schema model -- does not run the pre validate hooks
       );

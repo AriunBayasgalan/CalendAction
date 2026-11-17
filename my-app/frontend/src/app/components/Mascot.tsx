@@ -61,7 +61,7 @@ function Mascot({ taskBlocks, onOpenBlock, onAddTask }: MascotProps) {
     setSpeech({ kind: 'loading' })
     const now = new Date()
     try {
-      // Classes from now on (any week); placed tasks are already loaded
+      // Events from now on (any week); placed tasks are already loaded
       const res = await apiFetch(`/events?${new URLSearchParams({ from: now.toISOString() })}`)
       if (res.status === 401) {
         logout()

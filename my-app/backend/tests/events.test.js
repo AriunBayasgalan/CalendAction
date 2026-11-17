@@ -239,6 +239,108 @@ describe('scheduled tasks displaced by an event', () => {
   });
 });
 
+describe('weekly repeat', () => {
+  test('a create without repeat still saves one event and blocks that time', async () => {
+    const created = await call('POST', '/events', {
+      user: userA,
+      body: { title: 'CS 2340', start: slot.nine, end: slot.ten },
+    });
+    assert.equal(created.status, 201, created.text);
+    assert.equal(created.json.repeat, undefined);
+    assert.equal(created.json.repeated, undefined);
+    assert.equal(created.json.category, undefined);
+
+    const party = await call('POST', '/events', {
+      user: userA,
+      body: { title: 'Birthday party', start: slot.nine, end: slot.tenFifteen },
+    });
+    assert.equal(party.status, 409, party.text);
+    assert.equal(await Event.countDocuments({ owner: userA }), 1);
+  });
+
+  test('a one-off event is a single document', async () => {
+    const created = await call('POST', '/events', {
+      user: userA,
+      body: {
+        title: 'Birthday party',
+        start: slot.ten,
+        end: slot.eleven,
+        location: 'Piedmont Park',
+      },
+    });
+    assert.equal(created.status, 201, created.text);
+    assert.equal(created.json.title, 'Birthday party');
+    assert.equal(created.json.repeat, undefined);
+    assert.equal(await Event.countDocuments({ owner: userA }), 1);
+  });
+
+  test('weekly creates one document per week and nothing if any week overlaps', async () => {
+    const created = await call('POST', '/events', {
+      user: userA,
+      body: {
+        title: 'CS 2340',
+        start: slot.nine,
+        end: slot.tenFifteen,
+        repeat: 'weekly',
+        repeatUntil: '2027-03-16',
+      },
+    });
+    assert.equal(created.status, 201, created.text);
+    assert.equal(created.json.repeated, 3);
+    assert.equal(created.json.repeat, 'weekly');
+
+    const stored = await Event.find({ owner: userA }).sort({ start: 1 });
+    assert.equal(stored.length, 3);
+    assert.equal(new Set(stored.map((event) => String(event.seriesId))).size, 1);
+    assert.deepEqual(
+      stored.map((event) => event.start.toISOString()),
+      ['2027-03-02T14:00:00.000Z', '2027-03-09T14:00:00.000Z', '2027-03-16T13:00:00.000Z'],
+    );
+
+    await Event.deleteMany({});
+    await call('POST', '/events', {
+      user: userA,
+      body: { title: 'Office hours', start: '2027-03-09T14:00:00.000Z', end: '2027-03-09T15:00:00.000Z' },
+    });
+    const blocked = await call('POST', '/events', {
+      user: userA,
+      body: {
+        title: 'CS 2340',
+        start: slot.nine,
+        end: slot.tenFifteen,
+        repeat: 'weekly',
+        repeatUntil: '2027-03-16',
+      },
+    });
+    assert.equal(blocked.status, 409, blocked.text);
+    assert.equal(await Event.countDocuments({ owner: userA, title: 'CS 2340' }), 0);
+    assert.equal(await Event.countDocuments({ owner: userA }), 1);
+  });
+
+  test('weekly validation reports a bad end date', async () => {
+    const early = await call('POST', '/events', {
+      user: userA,
+      body: {
+        title: 'CS 2340',
+        start: slot.nine,
+        end: slot.ten,
+        repeat: 'weekly',
+        repeatUntil: '2027-03-01',
+      },
+    });
+    assert.equal(early.status, 400, early.text);
+    assert.equal(early.json.details[0].field, 'repeatUntil');
+
+    const missing = await call('POST', '/events', {
+      user: userA,
+      body: { title: 'CS 2340', start: slot.nine, end: slot.ten, repeat: 'weekly' },
+    });
+    assert.equal(missing.status, 400, missing.text);
+    assert.equal(missing.json.details[0].field, 'repeatUntil');
+    assert.equal(await Event.countDocuments({ owner: userA }), 0);
+  });
+});
+
 describe('class to-do check-off (CA-24)', () => {
   async function classWithNotes(extra = {}) {
     const created = await Event.create({

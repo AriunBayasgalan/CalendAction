@@ -16,6 +16,7 @@ export type CalendarEvent = {
   startedAt?: string
   // CA-24: indexes of the to-do lines (split on "\n") that are checked off
   todoDone?: number[]
+  repeat?: 'weekly'
 }
 
 export type PlacedEvent = {
@@ -134,6 +135,7 @@ export type TaskPlacement = {
 export type EventSaveResult = CalendarEvent & {
   moved?: TaskPlacement[]
   unscheduled?: TaskPlacement[]
+  repeated?: number
 }
 
 export type NewEvent = {
@@ -142,6 +144,8 @@ export type NewEvent = {
   end: string
   location?: string
   notes?: string
+  repeat?: 'none' | 'weekly'
+  repeatUntil?: string
 }
 
 export type EventField = keyof NewEvent
@@ -151,7 +155,7 @@ export type ApiErrors = {
   fields: Partial<Record<EventField, string>>
 }
 
-const KNOWN_FIELDS: EventField[] = ['title', 'start', 'end', 'location', 'notes']
+const KNOWN_FIELDS: EventField[] = ['title', 'start', 'end', 'location', 'notes', 'repeatUntil']
 
 // Turns any non-2xx event response into messages the form can show. Field errors
 // go next to their input; anything else (including problems with fields the form

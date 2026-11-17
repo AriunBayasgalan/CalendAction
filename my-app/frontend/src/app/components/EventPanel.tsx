@@ -3,9 +3,9 @@ import { useAuth } from '../../contexts/auth.ts'
 import { readErrorMessage } from './apiErrors.ts'
 import { formatEventTime, startState, type CalendarEvent } from './events.ts'
 import { formatFullDate, formatTime } from './week.ts'
-// Same dialog frame and buttons as "Add class"; panel-only bits live in EventPanel.module.css
+// Same dialog frame and buttons as "Add event"; panel-only bits live in EventPanel.module.css
 import Button from './ui/Button.tsx'
-import dialogStyles from './AddClassDialog.module.css'
+import dialogStyles from './AddEventDialog.module.css'
 import styles from './EventPanel.module.css'
 
 // "Tue, Mar 2", for when an upcoming block can be started
@@ -16,14 +16,14 @@ const startDayFormat = new Intl.DateTimeFormat(undefined, {
 })
 
 type EventPanelProps = {
-  // The clicked block (a class or a placed task); null keeps the panel closed.
+  // The clicked block (an event or a placed task); null keeps the panel closed.
   event: CalendarEvent | null
   // Decides whether today is the block's day, so Start turns on at midnight without a reload
   now: Date
   onClose: () => void
   // Start succeeded: gets the same block with its new startedAt (CA-25).
   onStarted: (event: CalendarEvent) => void
-  // Classes only: hand the event to the edit dialog.
+  // Events only: hand the event to the edit dialog.
   onEdit: (event: CalendarEvent) => void
   // CA-24: a check-off was saved; `todo` is the text the line numbers refer to.
   onTodoSaved: (event: CalendarEvent, todo: string, done: number[]) => void
@@ -166,7 +166,7 @@ function EventPanel({ event, now, onClose, onStarted, onEdit, onTodoSaved }: Eve
   const start = new Date(event.start)
   const end = new Date(event.end)
   const time = formatEventTime(start, end, start.getTime() === end.getTime())
-  // A task's to-do comes from the task form; a class's from its Notes field
+  // A task's to-do comes from the task form; an event's from its Notes field
   const todo = (event.isTask ? event.todoText : event.notes) ?? ''
 
   const state = startState(event, now)
@@ -190,7 +190,7 @@ function EventPanel({ event, now, onClose, onStarted, onEdit, onTodoSaved }: Eve
     >
       <div className={dialogStyles.form}>
         <div>
-          <p className={styles.kind}>{event.isTask ? 'Task' : 'Class'}</p>
+          <p className={styles.kind}>{event.isTask ? 'Task' : 'Event'}</p>
           <h2 id="event-panel-title" className={dialogStyles.title}>
             {event.title}
           </h2>
@@ -201,6 +201,12 @@ function EventPanel({ event, now, onClose, onStarted, onEdit, onTodoSaved }: Eve
           <dd>
             {formatFullDate(start)} · {time}
           </dd>
+          {event.repeat === 'weekly' && (
+            <>
+              <dt>Repeats</dt>
+              <dd>Every week</dd>
+            </>
+          )}
           {event.location && (
             <>
               <dt>Where</dt>

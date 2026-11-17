@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
-import AddClassDialog from '../components/AddClassDialog.tsx'
+import AddEventDialog from '../components/AddEventDialog.tsx'
 import EditEventDialog from '../components/EditEventDialog.tsx'
 import EventPanel from '../components/EventPanel.tsx'
 import StreakBadge from '../components/StreakBadge.tsx'
@@ -74,13 +74,13 @@ function WeekPage() {
       setTaskNotices([])
       return
     }
-    const classTitle = result.title
+    const eventTitle = result.title
     const notices: TaskNotice[] = [
       ...(result.moved ?? []).map((task) => ({
-        text: `“${task.title}” moved to ${placedFormat.format(new Date(task.start!))} to make room for “${classTitle}”`,
+        text: `“${task.title}” moved to ${placedFormat.format(new Date(task.start!))} to make room for “${eventTitle}”`,
       })),
       ...(result.unscheduled ?? []).map((task) => ({
-        text: `“${task.title}” unscheduled because “${classTitle}” now uses its time`,
+        text: `“${task.title}” unscheduled because “${eventTitle}” now uses its time`,
         alert: true,
       })),
     ]
@@ -160,7 +160,7 @@ function WeekPage() {
         actions={
           <>
             <StreakBadge reloadToken={streakReload} today={toIsoDate(now)} />
-            <AddClassDialog
+            <AddEventDialog
               defaultDate={isCurrentWeek ? now : weekStart}
               onCreated={handleEventSaved}
             />
@@ -183,13 +183,13 @@ function WeekPage() {
       )}
       {weekIsEmpty && (
         <div role="status" className={styles.emptyWeek}>
-          <p>This week is empty. Add a class to put something on the grid.</p>
+          <p>This week is empty. Add an event to put something on the grid.</p>
           <Button
             type="button"
             size="sm"
-            onClick={() => document.querySelector<HTMLButtonElement>('[data-add-class]')?.click()}
+            onClick={() => document.querySelector<HTMLButtonElement>('[data-add-event]')?.click()}
           >
-            Add class
+            Add event
           </Button>
         </div>
       )}
