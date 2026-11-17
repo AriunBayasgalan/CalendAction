@@ -35,3 +35,44 @@
   font-style: italic;
   color: var(--text);
 }
+
+/* CA-24: to-do lines as checkboxes */
+.progress {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+
+  input {
+    flex: none;
+    margin: 3px 0 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+}
+
+.checked {
+  color: var(--text);
+  text-decoration: line-through;
+}
+
+.error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--danger);
+}

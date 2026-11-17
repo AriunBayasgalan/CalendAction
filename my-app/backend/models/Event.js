@@ -10,6 +10,8 @@ const eventSchema = new mongoose.Schema(
     // When the user pressed Start on this block (CA-25); only POST /events/:id/start sets it,
     // and updateEvent clears it when the class gets a new time
     startedAt: { type: Date },
+    // CA-24: indexes of the notes lines (the class's to-do) the user checked off
+    todoDone: { type: [Number], default: [] },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   },
   { timestamps: true }

@@ -411,3 +411,62 @@ describe('scheduled task updates', () => {
     });
 });
 
+
+describe('to-do check-off (CA-24)', () => {
+    async function taskWithTodo(extra = {}) {
+        const created = await Task.create({
+            owner: userA,
+            title: 'Essay',
+            durationMinutes: 60,
+            todoText: 'Outline\nDraft\nEdit',
+            ...extra,
+        });
+        return created._id.toString();
+    }
+
+    test('checked lines are saved and come back on the next load', async () => {
+        const id = await taskWithTodo();
+        const res = await call('PATCH', `/tasks/${id}`, { user: userA, body: { todoDone: [2, 0, 2] } });
+        assert.equal(res.status, 200);
+        assert.deepEqual(res.json.task.todoDone, [0, 2]);
+
+        const list = await call('GET', '/tasks', { user: userA });
+        assert.deepEqual(list.json.tasks[0].todoDone, [0, 2]);
+    });
+
+    test('unchecking removes the line', async () => {
+        const id = await taskWithTodo({ todoDone: [0, 1] });
+        const res = await call('PATCH', `/tasks/${id}`, { user: userA, body: { todoDone: [1] } });
+        assert.equal(res.status, 200);
+        assert.deepEqual(res.json.task.todoDone, [1]);
+    });
+
+    test('checking a line keeps a scheduled slot', async () => {
+        const start = new Date('2027-03-02T15:00:00.000Z');
+        const end = new Date('2027-03-02T16:00:00.000Z');
+        const id = await taskWithTodo({ status: 'scheduled', start, end });
+        const res = await call('PATCH', `/tasks/${id}`, { user: userA, body: { todoDone: [0] } });
+        assert.equal(res.json.task.status, 'scheduled');
+        assert.equal(res.json.task.start, start.toISOString());
+    });
+
+    test('new to-do text clears the checks', async () => {
+        const id = await taskWithTodo({ todoDone: [0] });
+        const res = await call('PATCH', `/tasks/${id}`, { user: userA, body: { todoText: 'Something else' } });
+        assert.deepEqual(res.json.task.todoDone, []);
+    });
+
+    test('rejects bad line numbers', async () => {
+        const id = await taskWithTodo();
+        for (const todoDone of [[-1], [1.5], ['0'], 'nope']) {
+            const res = await call('PATCH', `/tasks/${id}`, { user: userA, body: { todoDone } });
+            assert.equal(res.status, 400, JSON.stringify(todoDone));
+        }
+    });
+
+    test("another user's task can't be checked", async () => {
+        const id = await taskWithTodo();
+        const res = await call('PATCH', `/tasks/${id}`, { user: userB, body: { todoDone: [0] } });
+        assert.equal(res.status, 404);
+    });
+});
