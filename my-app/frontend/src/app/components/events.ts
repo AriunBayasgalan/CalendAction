@@ -16,8 +16,6 @@ export type CalendarEvent = {
   startedAt?: string
   // CA-24: indexes of the to-do lines (split on "\n") that are checked off
   todoDone?: number[]
-  // Missing on events saved before categories existed; those still read as a class.
-  category?: string
   repeat?: 'weekly'
 }
 
@@ -146,16 +144,8 @@ export type NewEvent = {
   end: string
   location?: string
   notes?: string
-  category?: string
   repeat?: 'none' | 'weekly'
   repeatUntil?: string
-}
-
-// Tasks stay "Task". Older events have no category and still show as a class.
-export function eventKind(event: { isTask?: boolean; category?: string }) {
-  if (event.isTask) return 'Task'
-  const category = event.category?.trim()
-  return category || 'Class'
 }
 
 export type EventField = keyof NewEvent
@@ -165,7 +155,7 @@ export type ApiErrors = {
   fields: Partial<Record<EventField, string>>
 }
 
-const KNOWN_FIELDS: EventField[] = ['title', 'start', 'end', 'location', 'notes']
+const KNOWN_FIELDS: EventField[] = ['title', 'start', 'end', 'location', 'notes', 'repeatUntil']
 
 // Turns any non-2xx event response into messages the form can show. Field errors
 // go next to their input; anything else (including problems with fields the form

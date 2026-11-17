@@ -22,21 +22,12 @@ const dateValue = z
   })
   .transform((s) => new Date(s));
 
-// Empty becomes "no category" so older clients can omit it.
-const categoryField = z
-  .string()
-  .trim()
-  .max(40)
-  .optional()
-  .transform((value) => (value ? value : undefined));
-
 const eventFields = z.object({
   title: z.string().trim().min(1).max(200),
   start: dateValue,
   end: dateValue,
   location: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(2000).optional(),
-  category: categoryField,
   // CA-24: checked-off lines of notes (the event's to-do)
   todoDone: todoDoneInput.optional(),
 });
@@ -114,7 +105,7 @@ export async function createEvent(req, res) {
 
   const ownerId = req.user.id;
   const timeZone = timeZoneOf(req);
-  const { title, start, end, location, notes, todoDone, category, repeat, repeatUntil } = parsed.data;
+  const { title, start, end, location, notes, todoDone, repeat, repeatUntil } = parsed.data;
 
   let slots = [{ start, end }];
   if (repeat === 'weekly') {
@@ -142,7 +133,6 @@ export async function createEvent(req, res) {
         title,
         location,
         notes,
-        category,
         todoDone,
         owner: ownerId,
         ...(seriesId ? { repeat: 'weekly', seriesId } : {}),

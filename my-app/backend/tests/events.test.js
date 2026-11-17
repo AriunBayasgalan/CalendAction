@@ -239,45 +239,39 @@ describe('scheduled tasks displaced by an event', () => {
   });
 });
 
-describe('event category and weekly repeat', () => {
-  test('a create without the new fields still saves one event and blocks that time', async () => {
+describe('weekly repeat', () => {
+  test('a create without repeat still saves one event and blocks that time', async () => {
     const created = await call('POST', '/events', {
       user: userA,
       body: { title: 'CS 2340', start: slot.nine, end: slot.ten },
     });
     assert.equal(created.status, 201, created.text);
-    assert.equal(created.json.category, undefined);
     assert.equal(created.json.repeat, undefined);
     assert.equal(created.json.repeated, undefined);
+    assert.equal(created.json.category, undefined);
 
     const party = await call('POST', '/events', {
       user: userA,
-      body: {
-        title: 'Birthday party',
-        category: 'Birthday',
-        start: slot.nine,
-        end: slot.tenFifteen,
-      },
+      body: { title: 'Birthday party', start: slot.nine, end: slot.tenFifteen },
     });
     assert.equal(party.status, 409, party.text);
     assert.equal(await Event.countDocuments({ owner: userA }), 1);
   });
 
-  test('a one-off event keeps the category the user typed', async () => {
+  test('a one-off event is a single document', async () => {
     const created = await call('POST', '/events', {
       user: userA,
       body: {
         title: 'Birthday party',
-        category: 'Birthday',
         start: slot.ten,
         end: slot.eleven,
         location: 'Piedmont Park',
       },
     });
     assert.equal(created.status, 201, created.text);
-    assert.equal(created.json.category, 'Birthday');
+    assert.equal(created.json.title, 'Birthday party');
     assert.equal(created.json.repeat, undefined);
-    assert.equal(await Event.countDocuments({ owner: userA, category: 'Birthday' }), 1);
+    assert.equal(await Event.countDocuments({ owner: userA }), 1);
   });
 
   test('weekly creates one document per week and nothing if any week overlaps', async () => {
@@ -285,7 +279,6 @@ describe('event category and weekly repeat', () => {
       user: userA,
       body: {
         title: 'CS 2340',
-        category: 'Class',
         start: slot.nine,
         end: slot.tenFifteen,
         repeat: 'weekly',
@@ -294,7 +287,6 @@ describe('event category and weekly repeat', () => {
     });
     assert.equal(created.status, 201, created.text);
     assert.equal(created.json.repeated, 3);
-    assert.equal(created.json.category, 'Class');
     assert.equal(created.json.repeat, 'weekly');
 
     const stored = await Event.find({ owner: userA }).sort({ start: 1 });
@@ -314,7 +306,6 @@ describe('event category and weekly repeat', () => {
       user: userA,
       body: {
         title: 'CS 2340',
-        category: 'Class',
         start: slot.nine,
         end: slot.tenFifteen,
         repeat: 'weekly',
@@ -326,7 +317,7 @@ describe('event category and weekly repeat', () => {
     assert.equal(await Event.countDocuments({ owner: userA }), 1);
   });
 
-  test('weekly validation reports a bad end date and a too-long category', async () => {
+  test('weekly validation reports a bad end date', async () => {
     const early = await call('POST', '/events', {
       user: userA,
       body: {
@@ -346,13 +337,6 @@ describe('event category and weekly repeat', () => {
     });
     assert.equal(missing.status, 400, missing.text);
     assert.equal(missing.json.details[0].field, 'repeatUntil');
-
-    const longCategory = await call('POST', '/events', {
-      user: userA,
-      body: { title: 'Visit', category: 'x'.repeat(41), start: slot.nine, end: slot.ten },
-    });
-    assert.equal(longCategory.status, 400, longCategory.text);
-    assert.equal(longCategory.json.details[0].field, 'category');
     assert.equal(await Event.countDocuments({ owner: userA }), 0);
   });
 });

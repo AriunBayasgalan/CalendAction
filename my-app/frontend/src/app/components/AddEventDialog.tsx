@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import {
   readApiErrors,
@@ -20,7 +20,6 @@ type AddEventDialogProps = {
 }
 
 const NO_ERRORS: ApiErrors = { form: [], fields: {} }
-const CATEGORIES = ['Class', 'Social', 'Birthday', 'Work', 'Personal', 'Other']
 // 16 weekly dates: the first day plus 15 more weeks.
 const WEEKLY_SPAN = 15
 const STATUS_MS = 5000
@@ -42,7 +41,6 @@ function AddEventDialog({ defaultDate, onCreated }: AddEventDialogProps) {
   const { apiFetch, logout } = useAuth()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
-  const listId = useId()
   const [errors, setErrors] = useState<ApiErrors>(NO_ERRORS)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [status, setStatus] = useState('')
@@ -89,14 +87,12 @@ function AddEventDialog({ defaultDate, onCreated }: AddEventDialogProps) {
     // "Saving..." can never get stuck.
     try {
       const formData = new FormData(event.currentTarget)
-      const category = optional(formData.get('category'))
       const body: NewEvent = {
         title: String(formData.get('title') ?? ''),
         start: toIsoDateTime(date, String(formData.get('startTime'))),
         end: toIsoDateTime(date, String(formData.get('endTime'))),
         location: optional(formData.get('location')),
         notes: optional(formData.get('notes')),
-        ...(category ? { category } : {}),
         ...(repeat === 'weekly' ? { repeat: 'weekly', repeatUntil: until } : {}),
       }
 
@@ -157,21 +153,6 @@ function AddEventDialog({ defaultDate, onCreated }: AddEventDialogProps) {
             autoComplete="off"
             error={errors.fields.title}
           />
-          <Field
-            label="Type"
-            name="category"
-            list={listId}
-            defaultValue="Class"
-            placeholder="Class, birthday, meeting"
-            autoComplete="off"
-            hint="Pick a suggestion or type your own."
-            error={errors.fields.category}
-          />
-          <datalist id={listId}>
-            {CATEGORIES.map((category) => (
-              <option key={category} value={category} />
-            ))}
-          </datalist>
           <Field
             label="Date"
             name="date"

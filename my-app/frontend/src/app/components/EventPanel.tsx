@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import { readErrorMessage } from './apiErrors.ts'
-import { eventKind, formatEventTime, startState, type CalendarEvent } from './events.ts'
+import { formatEventTime, startState, type CalendarEvent } from './events.ts'
 import { formatFullDate, formatTime } from './week.ts'
 // Same dialog frame and buttons as "Add event"; panel-only bits live in EventPanel.module.css
 import Button from './ui/Button.tsx'
@@ -190,7 +190,7 @@ function EventPanel({ event, now, onClose, onStarted, onEdit, onTodoSaved }: Eve
     >
       <div className={dialogStyles.form}>
         <div>
-          <p className={styles.kind}>{eventKind(event)}</p>
+          <p className={styles.kind}>{event.isTask ? 'Task' : 'Event'}</p>
           <h2 id="event-panel-title" className={dialogStyles.title}>
             {event.title}
           </h2>

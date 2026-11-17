@@ -7,9 +7,6 @@ const eventSchema = new mongoose.Schema(
     end: { type: Date, required: true },
     location: { type: String, trim: true, maxlength: 200 },
     notes: { type: String, trim: true, maxlength: 2000 },
-    // Optional label such as Class, Birthday, or whatever the user typed.
-    // Missing on events created before this field: the app still treats those as classes.
-    category: { type: String, trim: true, maxlength: 40 },
     // Set on each date of a weekly series. One-off events leave it unset.
     repeat: { type: String, enum: ['weekly'] },
     seriesId: { type: mongoose.Schema.Types.ObjectId, index: true },
