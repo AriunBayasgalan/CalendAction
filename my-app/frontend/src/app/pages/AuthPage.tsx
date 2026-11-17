@@ -131,7 +131,7 @@ function AuthPage({ mode }: { mode: AuthMode }) {
             {isRegistering ? 'Create your account' : 'Log in'}
           </h1>
           <p className={styles.subtitle}>
-            {isRegistering ? 'Save your classes, tasks, and streak.' : 'Welcome back.'}
+            {isRegistering ? 'Save your events, tasks, and streak.' : 'Welcome back.'}
           </p>
         </div>
 

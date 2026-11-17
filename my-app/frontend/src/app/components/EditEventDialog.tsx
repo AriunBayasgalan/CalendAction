@@ -10,8 +10,8 @@ import {
 import { toIsoDate } from './week.ts'
 import Button from './ui/Button.tsx'
 import Field from './ui/Field.tsx'
-// Same look as the "Add class" dialog
-import styles from './AddClassDialog.module.css'
+// Same look as the "Add event" dialog
+import styles from './AddEventDialog.module.css'
 
 type EditEventDialogProps = {
   // The event being edited; null keeps the dialog closed.
@@ -109,6 +109,7 @@ function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
         // Empty strings clear these fields
         location: String(formData.get('location') ?? '').trim(),
         notes: String(formData.get('notes') ?? '').trim(),
+        category: String(formData.get('category') ?? '').trim(),
       }),
     })
   }
@@ -134,6 +135,16 @@ function EditEventDialog({ event, onClose, onChanged }: EditEventDialogProps) {
             autoComplete="off"
             error={errors.fields.title}
           />
+          <Field
+            label="Type"
+            name="category"
+            defaultValue={event.category ?? 'Class'}
+            autoComplete="off"
+            error={errors.fields.category}
+          />
+          {event.repeat === 'weekly' && (
+            <p className={styles.hint}>This date is part of a weekly event. Saving changes this date only.</p>
+          )}
           <Field
             label="Start"
             name="start"

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { formatEventTime, layoutDay, type CalendarEvent } from './events.ts'
+import { eventKind, formatEventTime, layoutDay, type CalendarEvent } from './events.ts'
 import {
   GRID_END_HOUR,
   GRID_START_HOUR,
@@ -190,7 +190,7 @@ function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
                     className={className}
                     onClick={() => onSelectEvent(event)}
                     style={style}
-                    title={`${event.isTask ? 'Task: ' : ''}${event.title}, ${time}`}
+                    title={`${eventKind(event)}: ${event.title}, ${time}`}
                   >
                     {label}
                   </button>

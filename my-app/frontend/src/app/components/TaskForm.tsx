@@ -48,9 +48,9 @@ export type TaskNotice = {
 type TaskFormProps = {
   // Gets the full task list whenever it changes, so the page can draw placed tasks on the grid.
   onTasksChange: (tasks: Task[]) => void
-  // Bumped when an event is saved so this list reloads (a class may have moved tasks).
+  // Bumped when an event is saved so this list reloads (an event may have moved tasks).
   reloadToken?: number
-  // Notes from saving a class, e.g. a task that was moved or unscheduled to make room.
+  // Notes from saving an event, e.g. a task that was moved or unscheduled to make room.
   extraNotices?: TaskNotice[]
 }
 
