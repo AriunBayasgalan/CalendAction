@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type CSSProperties } from 'react'
-import { layoutDay, type CalendarEvent } from './events.ts'
+import { formatEventTime, layoutDay, type CalendarEvent } from './events.ts'
 import {
   GRID_END_HOUR,
   GRID_START_HOUR,
@@ -7,7 +7,6 @@ import {
   SCROLL_TO_HOUR,
   formatFullDate,
   formatHour,
-  formatTime,
   formatWeekday,
   getWeekDays,
   isSameDay,
@@ -20,13 +19,6 @@ type WeekGridProps = {
   now: Date
   events: CalendarEvent[]
   onSelectEvent: (event: CalendarEvent) => void
-}
-
-// "9:00 AM – 10:00 AM", "Mon 9:00 AM – Wed 5:00 PM" for multi-day events, "9:00 AM" for zero-minute ones
-function formatEventTime(start: Date, end: Date, instant: boolean) {
-  if (instant) return formatTime(start)
-  if (isSameDay(start, end)) return `${formatTime(start)} – ${formatTime(end)}`
-  return `${formatWeekday(start)} ${formatTime(start)} – ${formatWeekday(end)} ${formatTime(end)}`
 }
 
 // Pixels kept above the 7 AM line when the grid opens
@@ -118,28 +110,21 @@ function WeekGrid({ weekStart, now, events, onSelectEvent }: WeekGridProps) {
                   </>
                 )
 
-                // Placed tasks are only shown; events open the edit dialog when clicked
-                if (event.isTask) {
-                  return (
-                    <div
-                      key={event._id}
-                      className={styles.task}
-                      style={style}
-                      title={`Task: ${event.title}, ${time}`}
-                    >
-                      {label}
-                    </div>
-                  )
-                }
+                // Every block opens the event panel; placed tasks keep their own look
+                const className = event.isTask
+                  ? styles.task
+                  : instant
+                    ? styles.eventMarker
+                    : styles.event
 
                 return (
                   <button
                     type="button"
                     key={event._id}
-                    className={instant ? styles.eventMarker : styles.event}
+                    className={className}
                     onClick={() => onSelectEvent(event)}
                     style={style}
-                    title={`${event.title}, ${time}`}
+                    title={`${event.isTask ? 'Task: ' : ''}${event.title}, ${time}`}
                   >
                     {label}
                   </button>

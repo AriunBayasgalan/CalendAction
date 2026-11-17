@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/auth.ts'
 import AddClassDialog from '../components/AddClassDialog.tsx'
 import EditEventDialog from '../components/EditEventDialog.tsx'
+import EventPanel from '../components/EventPanel.tsx'
 import TaskForm, { type Task, type TaskNotice } from '../components/TaskForm.tsx'
 import type { CalendarEvent, EventSaveResult } from '../components/events.ts'
 import { placedFormat } from '../components/tasks.ts'
@@ -26,6 +27,8 @@ function WeekPage() {
   })
   // Bumped by the Retry button to run the fetch again for the same week.
   const [attempt, setAttempt] = useState(0)
+  // The block open in the event panel (CA-23), or null when it's closed.
+  const [selected, setSelected] = useState<CalendarEvent | null>(null)
   // The event open in the edit dialog, or null when it's closed.
   const [editing, setEditing] = useState<CalendarEvent | null>(null)
   // Kept in sync by TaskForm, so placed tasks show on the grid right away
@@ -34,7 +37,16 @@ function WeekPage() {
   const [taskNotices, setTaskNotices] = useState<TaskNotice[]>([])
   const taskBlocks: CalendarEvent[] = tasks.flatMap((task) =>
     task.status === 'scheduled' && task.start && task.end
-      ? [{ _id: task._id, title: task.title, start: task.start, end: task.end, isTask: true }]
+      ? [
+          {
+            _id: task._id,
+            title: task.title,
+            start: task.start,
+            end: task.end,
+            isTask: true,
+            todoText: task.todoText,
+          },
+        ]
       : [],
   )
 
@@ -128,10 +140,18 @@ function WeekPage() {
           weekStart={weekStart}
           now={now}
           events={[...result.events, ...taskBlocks]}
-          onSelectEvent={setEditing}
+          onSelectEvent={setSelected}
         />
         <TaskForm onTasksChange={setTasks} reloadToken={taskReload} extraNotices={taskNotices} />
       </div>
+      <EventPanel
+        event={selected}
+        onClose={() => setSelected(null)}
+        onEdit={(event) => {
+          setSelected(null)
+          setEditing(event)
+        }}
+      />
       <EditEventDialog
         event={editing}
         onClose={() => setEditing(null)}
