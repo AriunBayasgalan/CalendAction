@@ -209,3 +209,79 @@
     font-weight: 600;
   }
 }
+
+/* CA-31: day picker and single-day grid at 480px and below (covers 390px). */
+.dayTabs {
+  display: none;
+}
+
+.dayTab {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.dayTabSelected {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.tabWeekday,
+.tabDate {
+  display: block;
+}
+
+@media (max-width: 480px) {
+  .scroller {
+    --gutter-width: 48px;
+  }
+
+  .dayTabs {
+    display: flex;
+    gap: 4px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 0 0 8px;
+    background: var(--bg);
+  }
+
+  .grid {
+    grid-template-columns: var(--gutter-width) minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .dayHeader:not(.selected),
+  .dayColumn:not(.selected) {
+    display: none;
+  }
+
+  .weekday,
+  .date {
+    font-size: 16px;
+  }
+
+  .eventTitle,
+  .eventTime {
+    white-space: normal;
+  }
+}
