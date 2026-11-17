@@ -5,6 +5,7 @@ import EditEventDialog from '../components/EditEventDialog.tsx'
 import EventPanel from '../components/EventPanel.tsx'
 import StreakBadge from '../components/StreakBadge.tsx'
 import Mascot from '../components/Mascot.tsx'
+import NagBanner from '../components/NagBanner.tsx'
 import TaskForm, { type Task, type TaskNotice } from '../components/TaskForm.tsx'
 import type { CalendarEvent, EventSaveResult } from '../components/events.ts'
 import { placedFormat } from '../components/tasks.ts'
@@ -156,6 +157,7 @@ function WeekPage() {
           </>
         }
       />
+      <NagBanner blocks={[...result.events, ...taskBlocks]} />
       {status === 'loading' && (
         <p role="status" className={styles.notice}>
           Loading events…
