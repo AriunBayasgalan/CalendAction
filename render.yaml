@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: calendaction-api
+    runtime: node
+    rootDir: my-app/backend
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: DEFAULT_TIMEZONE
+        value: America/New_York
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false

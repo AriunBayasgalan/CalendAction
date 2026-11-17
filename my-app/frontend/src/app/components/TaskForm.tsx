@@ -86,6 +86,14 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
     setNotices(extraNotices ?? [])
   }
 
+  const [loadAttempt, setLoadAttempt] = useState(0)
+
+  function retryLoad() {
+    setError('')
+    setLoadState('loading')
+    setLoadAttempt((n) => n + 1)
+  }
+
   useEffect(() => {
     apiFetch('/tasks')
       .then((res) => {
@@ -97,6 +105,7 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
         return res.ok ? res.json() : Promise.reject()
       })
       .then((data) => {
+        setError('')
         setTasks(data.tasks)
         setLoadState('loaded')
       })
@@ -104,7 +113,7 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
         setError('Could not load tasks.')
         setLoadState('failed')
       })
-  }, [apiFetch, logout, reloadToken])
+  }, [apiFetch, logout, reloadToken, loadAttempt])
 
   function startEdit(task: Task) {
     setError('')
@@ -365,9 +374,16 @@ function TaskForm({ onTasksChange, reloadToken = 0, extraNotices }: TaskFormProp
         </p>
       ))}
       {loadState === 'loading' ? (
-        <p className={styles.empty}>Loading tasks…</p>
+        <p role="status" className={styles.empty}>
+          Loading tasks…
+        </p>
       ) : loadState === 'failed' ? (
-        <p className={styles.empty}>Tasks couldn’t be loaded.</p>
+        <div className={styles.empty}>
+          <p role="alert">Tasks couldn’t be loaded.</p>
+          <button type="button" className={styles.retry} onClick={retryLoad}>
+            Retry
+          </button>
+        </div>
       ) : unscheduled.length === 0 ? (
         <p className={styles.empty}>No tasks yet.</p>
       ) : (
